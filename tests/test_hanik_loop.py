@@ -112,7 +112,7 @@ def test_render_html_report_is_escaped_directly():
             "recommendation": "<img src=x onerror=alert(1)>",
         }
     ]
-    html_content = loop.render_html_report("1", "2024-01-01T00:00:00+00:00", scores, recommendations)
+    html_content = loop.render_html_report(1, "2024-01-01T00:00:00+00:00", scores, recommendations)
 
     assert "<img src=x onerror=alert(1)>" not in html_content
     assert "&lt;img src=x onerror=alert(1)&gt;" in html_content

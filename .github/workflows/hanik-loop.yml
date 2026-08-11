@@ -15,15 +15,6 @@ name: Hanik Improvement Loop
 
 on:
   workflow_dispatch:
-    inputs:
-      continuous:
-        description: >-
-          Set to "true" to allow this run, if successful, to request the
-          next iteration via repository_dispatch. Requires
-          HANIK_DISPATCH_TOKEN to be configured. Defaults to not
-          continuing.
-        required: false
-        default: "false"
   repository_dispatch:
     types: [hanik-continue]
 
