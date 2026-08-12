@@ -1,0 +1,131 @@
+name: Hanik Improvement Loop
+
+# Runs one bounded batch of Hanik improvement-loop iterations per invocation.
+# Triggers:
+#   - workflow_dispatch: manual, human-initiated run.
+#   - repository_dispatch (type: hanik-continue): completion-triggered
+#     continuation, only ever sent by this same workflow using a dedicated
+#     HANIK_DISPATCH_TOKEN, and only after a *successful* run until
+#     each batch completes. Set HANIK_CONTINUOUS=false to stop automatic
+#     continuation. See README.md and SECURITY.md.
+#
+# This workflow intentionally does NOT run on a schedule and does NOT
+# implement an unbounded loop or long-lived daemon: each run performs one
+# bounded batch and exits. Continuing to the next batch is a separate,
+# explicit dispatch -- never an unbounded in-process loop.
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [hanik-continue]
+
+# Least-privilege permissions: only what is needed to check out code,
+# commit generated reports/state, and open a pull request.
+permissions:
+  contents: write
+  pull-requests: write
+
+# Prevent overlapping iterations from racing on state/state.json.
+concurrency:
+  group: hanik-improvement-loop
+  cancel-in-progress: false
+
+jobs:
+  iterate:
+    runs-on: ubuntu-latest
+    # Hard upper bound on wall-clock time for a single iteration so a
+    # hung or misbehaving run cannot consume runner minutes indefinitely.
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python3 -m pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python3 -m pytest tests/ -v
+
+      - name: Run Hanik iteration batch
+        id: iterate
+        env:
+          # Each dispatch performs this many iterations before requesting
+          # another dispatch. The persisted iteration number remains global.
+          HANIK_BATCH_SIZE: ${{ vars.HANIK_BATCH_SIZE || '50' }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$HANIK_BATCH_SIZE" =~ ^[1-9][0-9]*$ ]]; then
+            echo "HANIK_BATCH_SIZE must be a positive integer." >&2
+            exit 1
+          fi
+          current_iteration="$(python3 -c \
+            'import json; from pathlib import Path; p=Path("state/state.json"); print(json.loads(p.read_text()).get("iteration", 0) if p.exists() else 0)')"
+          batch_max="$((current_iteration + HANIK_BATCH_SIZE))"
+          for _ in $(seq 1 "$HANIK_BATCH_SIZE"); do
+            HANIK_MAX_ITERATIONS="$batch_max" python3 -m src.hanik_loop
+          done
+          echo "status=success" >> "$GITHUB_OUTPUT"
+
+      - name: Upload iteration artifacts
+        # Always upload, whether the iteration succeeded, stopped at the
+        # max-iteration guard, or the workflow later fails, so results are
+        # never silently lost.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanik-loop-output
+          path: |
+            reports/
+            state/state.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Open or update pull request with results
+        if: steps.iterate.outputs.status == 'success'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Hanik improvement loop: record iteration results"
+          title: "Hanik improvement loop: iteration results"
+          body: >-
+            Automated update from the Hanik improvement loop. Generated
+            report(s) under `reports/` and updated `state/state.json` are
+            included for human review. See HANIK_SPEC.md, SECURITY.md, and
+            DECISIONS.md for context.
+          branch: hanik-loop/iteration-results
+          add-paths: |
+            reports/
+            state/state.json
+          labels: hanik-loop
+
+      # Completion-triggered continuation: opt-in, bounded, and only ever
+      # fires after success. This uses a separate, minimally-scoped
+      # HANIK_DISPATCH_TOKEN rather than the default GITHUB_TOKEN, because
+      # GitHub Actions intentionally does not let GITHUB_TOKEN-authored
+      # events trigger further workflow runs (an anti-recursion
+      # safeguard). Using a dedicated token is the supported way to
+      # deliberately opt into chaining runs, and keeps a single,
+      # independently-revocable "emergency stop" (see SECURITY.md).
+      - name: Request next iteration (opt-in, on success only)
+        if: >-
+          steps.iterate.outputs.status == 'success' &&
+          vars.HANIK_CONTINUOUS != 'false'
+        env:
+          HANIK_DISPATCH_TOKEN: ${{ secrets.HANIK_DISPATCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HANIK_DISPATCH_TOKEN:-}" ]; then
+            echo "HANIK_DISPATCH_TOKEN is not configured; not requesting next iteration." >&2
+            exit 0
+          fi
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: token ${HANIK_DISPATCH_TOKEN}" \
+            "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+            -d '{"event_type":"hanik-continue"}'
