@@ -107,8 +107,9 @@ these rules:
 ## Retention
 
 - `reports/` accumulates one HTML file per iteration under version control,
-  giving a permanent, auditable history. Because iterations are bounded by
-  `HANIK_MAX_ITERATIONS`, the number of files is bounded too.
+  giving a permanent, auditable history. Each workflow run is bounded by
+  `HANIK_BATCH_SIZE`, while deliberate continuation can create additional
+  batches.
 - `state/state.json` retains a `history` array of all past iterations.
   Pruning/archival strategies for very long histories are a documented
   hypothesis in `HANIK_SPEC.md`, not yet implemented.

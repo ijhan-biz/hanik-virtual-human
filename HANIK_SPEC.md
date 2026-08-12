@@ -38,10 +38,10 @@ mistakes an untested idea for a guaranteed property of the system.
 ## 3. Human Control
 
 - **Requirement:** The improvement loop only runs when explicitly triggered
-  by a human (`workflow_dispatch`) or by a bounded automated dispatch chain
-  (`repository_dispatch`) that continues successful runs until
-  `HANIK_MAX_ITERATIONS` is reached. Setting `HANIK_CONTINUOUS=false` stops
-  automatic continuation; it is never scheduled to run indefinitely.
+  by a human (`workflow_dispatch`) or by an automated dispatch chain
+  (`repository_dispatch`) that runs one bounded batch at a time. Each batch
+  defaults to 50 iterations, and setting `HANIK_CONTINUOUS=false` stops
+  automatic continuation.
 - **Requirement:** A human can stop the loop at any time by not re-running
   the workflow, revoking the dispatch token, or setting
   `HANIK_CONTINUOUS=false`.
@@ -61,8 +61,8 @@ mistakes an untested idea for a guaranteed property of the system.
   external LLM or third-party API, eliminating an entire class of prompt
   injection, data exfiltration, and unpredictable-output risks.
 - **Requirement:** All scores are bounded (`BASE_SCORE` .. `MAX_SCORE`) and
-  iteration count is bounded (`HANIK_MAX_ITERATIONS`), so the system cannot
-  claim unbounded "improvement" or run unbounded compute.
+  each workflow dispatch is bounded by `HANIK_BATCH_SIZE`, so a single run
+  cannot consume unbounded compute.
 - **Hypothesis:** If a future iteration integrates a real LLM, it must first
   add prompt-injection defenses described in `SECURITY.md` before that
   capability is enabled by default.

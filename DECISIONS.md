@@ -32,18 +32,18 @@ designed and reviewed.
 
 ## 2. Bounded iterations, not an unbounded loop or daemon
 
-**Decision:** Each GitHub Actions run performs exactly **one** iteration
-and then exits. A successful run requests the next iteration through
-`repository_dispatch` until `HANIK_MAX_ITERATIONS` is reached, unless
-`HANIK_CONTINUOUS=false` is set. The bound is checked independently inside
-`run_iteration()`, which raises `MaxIterationsReachedError` once reached.
+**Decision:** Each GitHub Actions run performs one bounded batch of iterations
+and then exits. A successful run requests the next batch through
+`repository_dispatch` unless `HANIK_CONTINUOUS=false` is set. Each batch
+defaults to 50 iterations, while the persisted iteration number remains
+cumulative across batches.
 
 **Why:** The user asked for the loop to restart after each task
 completes rather than run on a fixed schedule. A truly unbounded,
 self-perpetuating automation is difficult to safely stop, easy to run
 away with cost/resources, and conflicts with keeping a human able to
 intervene at any time (`HANIK_SPEC.md` §3 Human Control). A bounded,
-iteration-per-run design keeps every single execution short, inspectable,
+batch-per-run design keeps every single execution short, inspectable,
 and cancelable, while still satisfying the "continues after completion"
 requirement within safe limits.
 
