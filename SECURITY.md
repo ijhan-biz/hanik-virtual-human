@@ -97,10 +97,9 @@ these rules:
 - The workflow (`.github/workflows/hanik-loop.yml`) sets a job-level
   `timeout-minutes` so a hung or misbehaving run cannot consume runner
   minutes indefinitely.
-- `HANIK_MAX_ITERATIONS` bounds the total number of iterations the loop
-  will ever perform; once reached, `run_iteration()` raises
-  `MaxIterationsReachedError` instead of continuing, and the workflow
-  treats this as a normal stop, not a failure requiring dispatch.
+- `HANIK_BATCH_SIZE` bounds the number of iterations in each workflow run
+  (default `50`); the workflow advances the per-batch maximum from the
+  persisted state before starting each batch.
 - `concurrency` is configured in the workflow so overlapping runs on the
   same ref cancel or queue rather than running in parallel and racing on
   `state/state.json`.

@@ -1,18 +1,18 @@
 name: Hanik Improvement Loop
 
-# Runs exactly one iteration of the Hanik improvement loop per invocation.
+# Runs one bounded batch of Hanik improvement-loop iterations per invocation.
 # Triggers:
 #   - workflow_dispatch: manual, human-initiated run.
 #   - repository_dispatch (type: hanik-continue): completion-triggered
 #     continuation, only ever sent by this same workflow using a dedicated
 #     HANIK_DISPATCH_TOKEN, and only after a *successful* run until
-#     HANIK_MAX_ITERATIONS is reached. Set HANIK_CONTINUOUS=false to stop
-#     automatic continuation. See README.md and SECURITY.md.
+#     each batch completes. Set HANIK_CONTINUOUS=false to stop automatic
+#     continuation. See README.md and SECURITY.md.
 #
 # This workflow intentionally does NOT run on a schedule and does NOT
 # implement an unbounded loop or long-lived daemon: each run performs one
-# iteration and exits. Continuing to the next iteration is a separate,
-# explicit, bounded dispatch -- never an in-process loop.
+# bounded batch and exits. Continuing to the next batch is a separate,
+# explicit dispatch -- never an unbounded in-process loop.
 
 on:
   workflow_dispatch:
@@ -51,20 +51,25 @@ jobs:
       - name: Run tests
         run: python3 -m pytest tests/ -v
 
-      - name: Run one Hanik loop iteration
+      - name: Run Hanik iteration batch
         id: iterate
         env:
-          # Bounds the total number of iterations the loop will ever run.
-          # Must be a positive integer; the loop itself also validates
-          # this and falls back to a safe default if unset or invalid.
-          HANIK_MAX_ITERATIONS: ${{ vars.HANIK_MAX_ITERATIONS || '50' }}
+          # Each dispatch performs this many iterations before requesting
+          # another dispatch. The persisted iteration number remains global.
+          HANIK_BATCH_SIZE: ${{ vars.HANIK_BATCH_SIZE || '50' }}
         run: |
           set -euo pipefail
-          if python3 -m src.hanik_loop; then
-            echo "status=success" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=stopped" >> "$GITHUB_OUTPUT"
+          if ! [[ "$HANIK_BATCH_SIZE" =~ ^[1-9][0-9]*$ ]]; then
+            echo "HANIK_BATCH_SIZE must be a positive integer." >&2
+            exit 1
           fi
+          current_iteration="$(python3 -c \
+            'import json; from pathlib import Path; p=Path("state/state.json"); print(json.loads(p.read_text()).get("iteration", 0) if p.exists() else 0)')"
+          batch_max="$((current_iteration + HANIK_BATCH_SIZE))"
+          for _ in $(seq 1 "$HANIK_BATCH_SIZE"); do
+            HANIK_MAX_ITERATIONS="$batch_max" python3 -m src.hanik_loop
+          done
+          echo "status=success" >> "$GITHUB_OUTPUT"
 
       - name: Upload iteration artifacts
         # Always upload, whether the iteration succeeded, stopped at the

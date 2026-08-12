@@ -16,7 +16,7 @@ credentials required.
   HTML escaping of untrusted content, corrupted-state recovery, atomic
   state writes, and the maximum-iteration guard.
 - **`.github/workflows/hanik-loop.yml`** -- a GitHub Actions workflow that
-  runs the loop's tests, executes one iteration, and (only when
+  runs the loop's tests, executes a 50-iteration batch, and (only when
   explicitly configured) opens/continues a pull request with the
   generated report and state. See [Continuous mode](#continuous-mode)
   below.
@@ -45,16 +45,17 @@ corrupted), writes `reports/iteration-NNNN.html`, and atomically updates
 
 ## Continuous mode
 
-By default, the workflow runs one iteration when manually triggered
+By default, the workflow runs 50 iterations when manually triggered
 (`workflow_dispatch`) and successful runs automatically request the next
-iteration via `repository_dispatch` until the configured maximum is reached.
+50-iteration batch via `repository_dispatch`, continuing from the persisted
+iteration count.
 The following are required:
 
 - `HANIK_CONTINUOUS` is not set to `false` (set it to `false` to stop
   continuation).
 - The repository secret `HANIK_DISPATCH_TOKEN` exists and is a
   minimally-scoped token dedicated to this purpose (see `SECURITY.md`).
-- `HANIK_MAX_ITERATIONS` has not yet been reached.
+- `HANIK_BATCH_SIZE` is a positive integer (defaults to `50`).
 
 A failed run never triggers the next iteration. See `SECURITY.md` for the
 full emergency-shutdown procedure and why a separate dispatch token (rather
