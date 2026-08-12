@@ -3,10 +3,11 @@ name: Hanik Improvement Loop
 # Runs exactly one iteration of the Hanik improvement loop per invocation.
 # Triggers:
 #   - workflow_dispatch: manual, human-initiated run.
-#   - repository_dispatch (type: hanik-continue): opt-in, completion-
-#     triggered continuation, only ever sent by this same workflow using a
-#     dedicated HANIK_DISPATCH_TOKEN, and only after a *successful* run
-#     when HANIK_CONTINUOUS=true. See README.md and SECURITY.md.
+#   - repository_dispatch (type: hanik-continue): completion-triggered
+#     continuation, only ever sent by this same workflow using a dedicated
+#     HANIK_DISPATCH_TOKEN, and only after a *successful* run until
+#     HANIK_MAX_ITERATIONS is reached. Set HANIK_CONTINUOUS=false to stop
+#     automatic continuation. See README.md and SECURITY.md.
 #
 # This workflow intentionally does NOT run on a schedule and does NOT
 # implement an unbounded loop or long-lived daemon: each run performs one
@@ -108,7 +109,7 @@ jobs:
       - name: Request next iteration (opt-in, on success only)
         if: >-
           steps.iterate.outputs.status == 'success' &&
-          vars.HANIK_CONTINUOUS == 'true'
+          vars.HANIK_CONTINUOUS != 'false'
         env:
           HANIK_DISPATCH_TOKEN: ${{ secrets.HANIK_DISPATCH_TOKEN }}
         run: |

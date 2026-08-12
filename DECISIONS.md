@@ -33,11 +33,10 @@ designed and reviewed.
 ## 2. Bounded iterations, not an unbounded loop or daemon
 
 **Decision:** Each GitHub Actions run performs exactly **one** iteration
-and then exits. Continuing to the next iteration is an explicit,
-opt-in `repository_dispatch` triggered only on success, only when
-`HANIK_CONTINUOUS=true`, and only up to `HANIK_MAX_ITERATIONS` (checked
-both by the workflow and independently inside `run_iteration()`, which
-raises `MaxIterationsReachedError` once the bound is reached).
+and then exits. A successful run requests the next iteration through
+`repository_dispatch` until `HANIK_MAX_ITERATIONS` is reached, unless
+`HANIK_CONTINUOUS=false` is set. The bound is checked independently inside
+`run_iteration()`, which raises `MaxIterationsReachedError` once reached.
 
 **Why:** The user asked for the loop to restart after each task
 completes rather than run on a fixed schedule. A truly unbounded,

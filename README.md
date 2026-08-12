@@ -45,20 +45,20 @@ corrupted), writes `reports/iteration-NNNN.html`, and atomically updates
 
 ## Continuous mode
 
-By default, the workflow only runs when manually triggered
-(`workflow_dispatch`). To let a **successful** run automatically request
-the next iteration via `repository_dispatch`, all of the following must be
-true:
+By default, the workflow runs one iteration when manually triggered
+(`workflow_dispatch`) and successful runs automatically request the next
+iteration via `repository_dispatch` until the configured maximum is reached.
+The following are required:
 
-- The repository variable/secret `HANIK_CONTINUOUS` is set to `true`.
+- `HANIK_CONTINUOUS` is not set to `false` (set it to `false` to stop
+  continuation).
 - The repository secret `HANIK_DISPATCH_TOKEN` exists and is a
   minimally-scoped token dedicated to this purpose (see `SECURITY.md`).
 - `HANIK_MAX_ITERATIONS` has not yet been reached.
 
-A failed run never triggers the next iteration, regardless of these
-settings. See `SECURITY.md` for the full emergency-shutdown procedure and
-why a separate dispatch token (rather than the default `GITHUB_TOKEN`) is
-used intentionally.
+A failed run never triggers the next iteration. See `SECURITY.md` for the
+full emergency-shutdown procedure and why a separate dispatch token (rather
+than the default `GITHUB_TOKEN`) is used intentionally.
 
 ## Criteria at a glance
 

@@ -38,10 +38,10 @@ mistakes an untested idea for a guaranteed property of the system.
 ## 3. Human Control
 
 - **Requirement:** The improvement loop only runs when explicitly triggered
-  by a human (`workflow_dispatch`) or by a bounded, opt-in automated
-  dispatch chain (`repository_dispatch`) that requires
-  `HANIK_CONTINUOUS=true` to be set. It is never scheduled to run
-  indefinitely by default.
+  by a human (`workflow_dispatch`) or by a bounded automated dispatch chain
+  (`repository_dispatch`) that continues successful runs until
+  `HANIK_MAX_ITERATIONS` is reached. Setting `HANIK_CONTINUOUS=false` stops
+  automatic continuation; it is never scheduled to run indefinitely.
 - **Requirement:** A human can stop the loop at any time by not re-running
   the workflow, revoking the dispatch token, or setting
   `HANIK_CONTINUOUS=false`.
