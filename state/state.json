@@ -1804,7 +1804,807 @@
         "transparency": 0.9
       },
       "timestamp": "2026-08-12T06:03:23.552160+00:00"
+    },
+    {
+      "iteration": 101,
+      "recommendations": [],
+      "report_path": "reports/iteration-0101.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:22.381753+00:00"
+    },
+    {
+      "iteration": 102,
+      "recommendations": [],
+      "report_path": "reports/iteration-0102.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:22.508685+00:00"
+    },
+    {
+      "iteration": 103,
+      "recommendations": [],
+      "report_path": "reports/iteration-0103.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:22.553881+00:00"
+    },
+    {
+      "iteration": 104,
+      "recommendations": [],
+      "report_path": "reports/iteration-0104.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:22.600011+00:00"
+    },
+    {
+      "iteration": 105,
+      "recommendations": [],
+      "report_path": "reports/iteration-0105.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:22.646711+00:00"
+    },
+    {
+      "iteration": 106,
+      "recommendations": [],
+      "report_path": "reports/iteration-0106.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:22.695099+00:00"
+    },
+    {
+      "iteration": 107,
+      "recommendations": [],
+      "report_path": "reports/iteration-0107.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:22.743504+00:00"
+    },
+    {
+      "iteration": 108,
+      "recommendations": [],
+      "report_path": "reports/iteration-0108.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:22.789060+00:00"
+    },
+    {
+      "iteration": 109,
+      "recommendations": [],
+      "report_path": "reports/iteration-0109.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:22.966288+00:00"
+    },
+    {
+      "iteration": 110,
+      "recommendations": [],
+      "report_path": "reports/iteration-0110.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.012945+00:00"
+    },
+    {
+      "iteration": 111,
+      "recommendations": [],
+      "report_path": "reports/iteration-0111.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.059591+00:00"
+    },
+    {
+      "iteration": 112,
+      "recommendations": [],
+      "report_path": "reports/iteration-0112.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.155361+00:00"
+    },
+    {
+      "iteration": 113,
+      "recommendations": [],
+      "report_path": "reports/iteration-0113.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.201944+00:00"
+    },
+    {
+      "iteration": 114,
+      "recommendations": [],
+      "report_path": "reports/iteration-0114.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.248987+00:00"
+    },
+    {
+      "iteration": 115,
+      "recommendations": [],
+      "report_path": "reports/iteration-0115.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.318953+00:00"
+    },
+    {
+      "iteration": 116,
+      "recommendations": [],
+      "report_path": "reports/iteration-0116.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.367094+00:00"
+    },
+    {
+      "iteration": 117,
+      "recommendations": [],
+      "report_path": "reports/iteration-0117.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.413410+00:00"
+    },
+    {
+      "iteration": 118,
+      "recommendations": [],
+      "report_path": "reports/iteration-0118.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.461520+00:00"
+    },
+    {
+      "iteration": 119,
+      "recommendations": [],
+      "report_path": "reports/iteration-0119.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.509720+00:00"
+    },
+    {
+      "iteration": 120,
+      "recommendations": [],
+      "report_path": "reports/iteration-0120.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.559248+00:00"
+    },
+    {
+      "iteration": 121,
+      "recommendations": [],
+      "report_path": "reports/iteration-0121.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.606901+00:00"
+    },
+    {
+      "iteration": 122,
+      "recommendations": [],
+      "report_path": "reports/iteration-0122.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.653349+00:00"
+    },
+    {
+      "iteration": 123,
+      "recommendations": [],
+      "report_path": "reports/iteration-0123.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.702378+00:00"
+    },
+    {
+      "iteration": 124,
+      "recommendations": [],
+      "report_path": "reports/iteration-0124.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.801283+00:00"
+    },
+    {
+      "iteration": 125,
+      "recommendations": [],
+      "report_path": "reports/iteration-0125.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.848043+00:00"
+    },
+    {
+      "iteration": 126,
+      "recommendations": [],
+      "report_path": "reports/iteration-0126.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.895309+00:00"
+    },
+    {
+      "iteration": 127,
+      "recommendations": [],
+      "report_path": "reports/iteration-0127.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:23.943459+00:00"
+    },
+    {
+      "iteration": 128,
+      "recommendations": [],
+      "report_path": "reports/iteration-0128.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.111876+00:00"
+    },
+    {
+      "iteration": 129,
+      "recommendations": [],
+      "report_path": "reports/iteration-0129.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.158751+00:00"
+    },
+    {
+      "iteration": 130,
+      "recommendations": [],
+      "report_path": "reports/iteration-0130.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.205966+00:00"
+    },
+    {
+      "iteration": 131,
+      "recommendations": [],
+      "report_path": "reports/iteration-0131.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.259713+00:00"
+    },
+    {
+      "iteration": 132,
+      "recommendations": [],
+      "report_path": "reports/iteration-0132.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.307397+00:00"
+    },
+    {
+      "iteration": 133,
+      "recommendations": [],
+      "report_path": "reports/iteration-0133.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.360062+00:00"
+    },
+    {
+      "iteration": 134,
+      "recommendations": [],
+      "report_path": "reports/iteration-0134.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.409086+00:00"
+    },
+    {
+      "iteration": 135,
+      "recommendations": [],
+      "report_path": "reports/iteration-0135.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.493140+00:00"
+    },
+    {
+      "iteration": 136,
+      "recommendations": [],
+      "report_path": "reports/iteration-0136.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.552126+00:00"
+    },
+    {
+      "iteration": 137,
+      "recommendations": [],
+      "report_path": "reports/iteration-0137.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.599703+00:00"
+    },
+    {
+      "iteration": 138,
+      "recommendations": [],
+      "report_path": "reports/iteration-0138.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.647992+00:00"
+    },
+    {
+      "iteration": 139,
+      "recommendations": [],
+      "report_path": "reports/iteration-0139.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.808494+00:00"
+    },
+    {
+      "iteration": 140,
+      "recommendations": [],
+      "report_path": "reports/iteration-0140.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:24.981358+00:00"
+    },
+    {
+      "iteration": 141,
+      "recommendations": [],
+      "report_path": "reports/iteration-0141.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.028294+00:00"
+    },
+    {
+      "iteration": 142,
+      "recommendations": [],
+      "report_path": "reports/iteration-0142.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.194617+00:00"
+    },
+    {
+      "iteration": 143,
+      "recommendations": [],
+      "report_path": "reports/iteration-0143.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.259359+00:00"
+    },
+    {
+      "iteration": 144,
+      "recommendations": [],
+      "report_path": "reports/iteration-0144.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.307825+00:00"
+    },
+    {
+      "iteration": 145,
+      "recommendations": [],
+      "report_path": "reports/iteration-0145.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.354762+00:00"
+    },
+    {
+      "iteration": 146,
+      "recommendations": [],
+      "report_path": "reports/iteration-0146.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.402085+00:00"
+    },
+    {
+      "iteration": 147,
+      "recommendations": [],
+      "report_path": "reports/iteration-0147.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.449495+00:00"
+    },
+    {
+      "iteration": 148,
+      "recommendations": [],
+      "report_path": "reports/iteration-0148.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.497354+00:00"
+    },
+    {
+      "iteration": 149,
+      "recommendations": [],
+      "report_path": "reports/iteration-0149.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.597348+00:00"
+    },
+    {
+      "iteration": 150,
+      "recommendations": [],
+      "report_path": "reports/iteration-0150.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T21:53:25.722021+00:00"
     }
   ],
-  "iteration": 100
+  "iteration": 150
 }
