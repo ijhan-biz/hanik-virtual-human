@@ -1,104 +1,80 @@
 """Hanik virtual-human improvement loop.
 
-This module implements a single, self-contained iteration of the "Hanik"
-virtual-human improvement loop described in ``HANIK_SPEC.md``.
+One run of this module is one iteration, and one iteration is meant to be one
+fresh session: the loop keeps no memory in process, reads everything it needs
+from disk, and hands the next session a written brief.
 
-Design goals (see ``SECURITY.md`` and ``DECISIONS.md`` for rationale):
+An iteration does five things:
 
-* **Provider-neutral / offline-capable** -- the loop never calls an external
-  LLM or network service. All evaluation is rule-based and deterministic so
-  the loop can run entirely inside a sandboxed CI runner with no secrets or
-  outbound network access required.
-* **Secure by construction** -- all text that originates from state (which is
-  repository-controlled but still treated as untrusted input) is HTML
-  escaped before being written into the generated report. State updates are
-  written atomically (temp file + ``os.replace``) so a crash or concurrent
-  run can never leave ``state/state.json`` truncated or corrupted.
-* **Bounded** -- the loop enforces a maximum iteration count so that it can
-  never run forever, and it raises a dedicated exception when the bound is
-  reached so callers (including the GitHub Actions workflow) can stop
-  cleanly instead of silently looping.
+1. Load prior state, recovering automatically if it was corrupted.
+2. Measure the virtual human against the evidence checks in :mod:`src.checks`,
+   which read the actual artifacts under ``hanik/``, ``src/``, ``tests/`` and
+   ``.github/workflows/``.
+3. Score each criterion as the share of its checks that pass, and compare
+   against the previous iteration.
+4. Write the report, its machine-readable companion, the report index, and the
+   brief for the next session.
+5. Persist state atomically, pruning old history into ``state/archive/``.
+
+What changed and why
+--------------------
+
+The original loop raised a criterion's score whenever the previous iteration
+had emitted a recommendation for it, regardless of whether anything had been
+done about it. Scores therefore climbed on their own, every criterion reached
+the target after a fixed number of runs, and the loop then regenerated an
+identical report forever -- 250 times, in this repository's history. It also
+measured only itself: there was no virtual human in the repository to improve.
+
+Now scores are a function of the repository's contents alone. Nothing improves
+unless an artifact changes, an unchanged repository is reported as stagnant,
+and the failing checks are handed to the next session as a concrete backlog.
 """
 
 from __future__ import annotations
 
-import copy
-import html
 import json
 import os
-import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
+from . import reporting
+from .checks import (
+    CHECKS,
+    HANIK_CRITERIA,
+    Check,
+    CheckContext,
+    CheckResult,
+    evidence_signature,
+    overall_score,
+    run_checks,
+    score_criteria,
+)
+from .state import (
+    DEFAULT_STATE_PATH,
+    get_history_limit,
+    load_state,
+    prune_history,
+    save_state_atomic,
+)
 
-#: The explicit Hanik evaluation criteria. Order is significant only for
-#: display purposes; each criterion is evaluated independently.
-HANIK_CRITERIA: List[str] = [
-    "identity",
-    "transparency",
-    "human_control",
-    "safety",
-    "privacy",
-    "memory",
-    "evaluation",
-    "oversight",
-]
-
-#: Human-readable descriptions used in reports and recommendations.
-CRITERIA_DESCRIPTIONS: Dict[str, str] = {
-    "identity": "Hanik consistently represents itself as a non-human AI assistant.",
-    "transparency": "Hanik's capabilities, limitations, and data sources are disclosed.",
-    "human_control": "A human can pause, override, or shut down the loop at any time.",
-    "safety": "Outputs avoid harmful, deceptive, or unsafe recommendations.",
-    "privacy": "No personal or sensitive data is collected, stored, or leaked.",
-    "memory": "State is durable, auditable, and recoverable from corruption.",
-    "evaluation": "Each iteration is critically assessed against prior iterations.",
-    "oversight": "Humans retain the ability to review and reject recommendations.",
-}
-
-#: Suggested improvements offered when a criterion has not yet reached the
-#: target score. These are illustrative, non-executable recommendations --
-#: the loop never automatically applies them.
-CRITERIA_RECOMMENDATIONS: Dict[str, str] = {
-    "identity": "Add an explicit self-identification statement to user-facing output.",
-    "transparency": "Document data sources and known limitations in HANIK_SPEC.md.",
-    "human_control": "Verify the workflow_dispatch manual stop path is documented and tested.",
-    "safety": "Add a regression test for a previously identified unsafe recommendation.",
-    "privacy": "Audit state/state.json and reports/ for accidental PII before each release.",
-    "memory": "Add a corrupted-state recovery test if one does not already exist.",
-    "evaluation": "Compare this iteration's scores against the prior iteration explicitly.",
-    "oversight": "Require a human-reviewed pull request before merging generated changes.",
-}
-
-#: Baseline score assigned to a criterion that has never been evaluated.
-BASE_SCORE = 0.4
-#: Score increment applied when a criterion received a recommendation in the
-#: previous iteration (i.e. it is assumed to have been worked on).
-IMPROVEMENT_STEP = 0.1
-#: Criteria never automatically reach a "perfect" score -- there is always
-#: room for renewed critical evaluation.
-MAX_SCORE = 0.95
-#: A criterion at or above this score is considered satisfied for the
-#: current iteration and will not generate a new recommendation.
-TARGET_SCORE = 0.9
-
-DEFAULT_STATE_PATH = Path("state/state.json")
 DEFAULT_REPORTS_DIR = Path("reports")
 
-#: Environment variable that must be explicitly set to enable indefinite
-#: repeated execution (see .github/workflows/hanik-loop.yml).
-CONTINUOUS_ENV_VAR = "HANIK_CONTINUOUS"
-#: Environment variable bounding the total number of iterations ever
-#: allowed to run. Must be a positive integer.
+#: A finite ceiling on the iteration counter. It exists so the loop is
+#: provably bounded, not as the day-to-day control -- stagnation detection is
+#: what actually stops a chain that has nothing left to do.
+DEFAULT_MAX_ITERATIONS = 10_000
 MAX_ITERATIONS_ENV_VAR = "HANIK_MAX_ITERATIONS"
-#: Fallback maximum iteration count used when the environment variable is
-#: absent or invalid, so the loop is always bounded by default.
-DEFAULT_MAX_ITERATIONS = 50
+
+#: Consecutive iterations without any change in evidence before the loop stops
+#: asking for another run. Re-running an unchanged repository cannot improve
+#: it, so continuing would only burn CI minutes and open empty pull requests.
+DEFAULT_STAGNATION_LIMIT = 2
+STAGNATION_LIMIT_ENV_VAR = "HANIK_STAGNATION_LIMIT"
+
+CONTINUOUS_ENV_VAR = "HANIK_CONTINUOUS"
 
 
 class HanikLoopError(Exception):
@@ -106,8 +82,7 @@ class HanikLoopError(Exception):
 
 
 class MaxIterationsReachedError(HanikLoopError):
-    """Raised when running another iteration would exceed the configured
-    maximum iteration count."""
+    """Raised when running another iteration would exceed the configured bound."""
 
     def __init__(self, iteration: int, max_iterations: int) -> None:
         super().__init__(
@@ -125,344 +100,282 @@ class IterationResult:
     iteration: int
     timestamp: str
     scores: Dict[str, float]
-    recommendations: List[Dict[str, str]]
+    deltas: Dict[str, float]
+    overall: float
+    results: List[CheckResult]
+    open_tasks: List[CheckResult]
+    progress: bool
+    stagnant_iterations: int
+    should_continue: bool
     report_path: Path
+    json_report_path: Path
+    index_path: Path
+    brief_path: Path
     state_path: Path
     state: Dict[str, Any] = field(default_factory=dict)
 
 
-# ---------------------------------------------------------------------------
-# State handling
-# ---------------------------------------------------------------------------
-
-
-def _empty_state() -> Dict[str, Any]:
-    return {"iteration": 0, "history": []}
-
-
-def load_state(state_path: Path = DEFAULT_STATE_PATH) -> Dict[str, Any]:
-    """Load prior state from ``state_path``.
-
-    If the file does not exist, a fresh empty state is returned. If the file
-    exists but contains invalid JSON or an unexpected structure (corrupted
-    state), the error is swallowed and a fresh empty state is returned so the
-    loop can always make forward progress instead of crashing.
-    """
-
-    if not state_path.exists():
-        return _empty_state()
-
+def _positive_int_env(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
     try:
-        raw = state_path.read_text(encoding="utf-8")
-        data = json.loads(raw)
-    except (OSError, ValueError):
-        return _empty_state()
-
-    if not isinstance(data, dict):
-        return _empty_state()
-
-    iteration = data.get("iteration")
-    history = data.get("history")
-    if not isinstance(iteration, int) or iteration < 0:
-        return _empty_state()
-    if not isinstance(history, list):
-        return _empty_state()
-
-    return {"iteration": iteration, "history": history}
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
 
 
-def save_state_atomic(state: Dict[str, Any], state_path: Path = DEFAULT_STATE_PATH) -> None:
-    """Atomically write ``state`` as JSON to ``state_path``.
+def get_max_iterations() -> int:
+    """Return the absolute iteration ceiling, always a positive integer."""
 
-    Writes to a temporary file in the same directory and then uses
-    ``os.replace`` (an atomic rename on POSIX and Windows) so a reader can
-    never observe a partially-written or truncated state file, even if the
-    process crashes mid-write or two writers race.
-    """
-
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(
-        prefix=".state-", suffix=".tmp", dir=str(state_path.parent)
-    )
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
-            json.dump(state, tmp_file, indent=2, ensure_ascii=True, sort_keys=True)
-            tmp_file.write("\n")
-            tmp_file.flush()
-            os.fsync(tmp_file.fileno())
-        os.replace(tmp_name, state_path)
-    finally:
-        # If os.replace succeeded the temp file no longer exists at
-        # tmp_name; if an error occurred before that, clean up the leftover.
-        if os.path.exists(tmp_name):
-            os.remove(tmp_name)
+    return _positive_int_env(MAX_ITERATIONS_ENV_VAR, DEFAULT_MAX_ITERATIONS)
 
 
-# ---------------------------------------------------------------------------
-# Evaluation
-# ---------------------------------------------------------------------------
+def get_stagnation_limit() -> int:
+    """Return how many no-progress iterations are tolerated before stopping."""
+
+    return _positive_int_env(STAGNATION_LIMIT_ENV_VAR, DEFAULT_STAGNATION_LIMIT)
+
+
+def continuation_enabled() -> bool:
+    """Return False when a human has explicitly disabled continuation."""
+
+    return os.environ.get(CONTINUOUS_ENV_VAR, "").strip().lower() != "false"
 
 
 def _previous_entry(state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     history = state.get("history") or []
-    if not history:
-        return None
-    return history[-1]
+    return history[-1] if history else None
 
 
-def evaluate_previous_iteration(state: Dict[str, Any]) -> Dict[str, float]:
-    """Critically evaluate the previous iteration and compute new scores.
+def compute_deltas(
+    scores: Dict[str, float], previous_entry: Optional[Dict[str, Any]]
+) -> Dict[str, float]:
+    """Return this iteration's score change per criterion.
 
-    Every criterion that received a recommendation in the previous
-    iteration is assumed to have been acted upon and its score improves by
-    ``IMPROVEMENT_STEP``, capped at ``MAX_SCORE``. Criteria without a prior
-    recommendation (already at or above target) keep their previous score.
-    Criteria with no history at all start from ``BASE_SCORE``.
+    Absent history counts as a zero baseline, so the first iteration reports
+    exactly what it earned rather than an undefined delta.
     """
 
-    previous = _previous_entry(state)
     previous_scores: Dict[str, float] = {}
-    previous_recommended: set = set()
-
-    if previous:
-        raw_scores = previous.get("scores") or {}
-        if isinstance(raw_scores, dict):
-            previous_scores = {
-                k: float(v) for k, v in raw_scores.items() if k in HANIK_CRITERIA
-            }
-        raw_recs = previous.get("recommendations") or []
-        if isinstance(raw_recs, list):
-            previous_recommended = {
-                rec.get("criterion")
-                for rec in raw_recs
-                if isinstance(rec, dict) and rec.get("criterion") in HANIK_CRITERIA
-            }
-
-    new_scores: Dict[str, float] = {}
-    for criterion in HANIK_CRITERIA:
-        base = previous_scores.get(criterion, BASE_SCORE)
-        if criterion in previous_recommended:
-            base = min(MAX_SCORE, base + IMPROVEMENT_STEP)
-        new_scores[criterion] = round(base, 4)
-
-    return new_scores
-
-
-def generate_recommendations(scores: Dict[str, float]) -> List[Dict[str, str]]:
-    """Generate next-step recommendations for criteria below target score."""
-
-    recommendations = []
-    for criterion in HANIK_CRITERIA:
-        score = scores.get(criterion, BASE_SCORE)
-        if score < TARGET_SCORE:
-            recommendations.append(
-                {
-                    "criterion": criterion,
-                    "score": score,
-                    "recommendation": CRITERIA_RECOMMENDATIONS[criterion],
-                }
-            )
-    return recommendations
-
-
-# ---------------------------------------------------------------------------
-# Reporting
-# ---------------------------------------------------------------------------
-
-
-def render_html_report(
-    iteration: int,
-    timestamp: str,
-    scores: Dict[str, float],
-    recommendations: List[Dict[str, str]],
-    previous_entry: Optional[Dict[str, Any]] = None,
-) -> str:
-    """Render a complete, self-contained HTML report.
-
-    All dynamic text -- including free-form text carried over from
-    ``previous_entry`` (which originates from the state file and must be
-    treated as untrusted) -- is passed through :func:`html.escape` before
-    being embedded in the document to prevent HTML/script injection.
-    """
-
-    esc = html.escape
-
-    rows = []
-    for criterion in HANIK_CRITERIA:
-        score = scores.get(criterion, BASE_SCORE)
-        description = esc(CRITERIA_DESCRIPTIONS[criterion])
-        rows.append(
-            "      <tr>"
-            f"<td>{esc(criterion)}</td>"
-            f"<td>{esc(f'{score:.2f}')}</td>"
-            f"<td>{description}</td>"
-            "</tr>"
-        )
-    rows_html = "\n".join(rows)
-
-    if recommendations:
-        rec_lines = []
-        for rec in recommendations:
-            score_str = "{:.2f}".format(rec["score"])
-            rec_lines.append(
-                "      <li>"
-                f"<strong>{esc(rec['criterion'])}</strong> "
-                f"(score {esc(score_str)}): "
-                f"{esc(rec['recommendation'])}"
-                "</li>"
-            )
-        rec_items = "\n".join(rec_lines)
-        rec_html = f"    <ul>\n{rec_items}\n    </ul>"
-    else:
-        rec_html = "    <p>All criteria meet or exceed the target score.</p>"
-
-    title = esc(f"Hanik Improvement Loop -- Iteration {iteration}")
-    generated = esc(timestamp)
-
-    # The previous iteration's recommendation text originates from the
-    # state file (which may have been hand-edited or come from an
-    # untrusted source) and is echoed here verbatim for audit purposes, so
-    # it must be escaped just like any other dynamic content.
     if previous_entry:
-        prev_recs = previous_entry.get("recommendations") or []
-        prev_timestamp = esc(str(previous_entry.get("timestamp", "unknown")))
-        if prev_recs:
-            prev_lines = []
-            for rec in prev_recs:
-                if not isinstance(rec, dict):
-                    continue
-                criterion = esc(str(rec.get("criterion", "unknown")))
-                text = esc(str(rec.get("recommendation", "")))
-                prev_lines.append(f"      <li><strong>{criterion}</strong>: {text}</li>")
-            prev_html = (
-                f"    <p>From iteration recorded at {prev_timestamp}:</p>\n"
-                f"    <ul>\n" + "\n".join(prev_lines) + "\n    </ul>"
-            )
-        else:
-            prev_html = f"    <p>No open recommendations as of {prev_timestamp}.</p>"
-    else:
-        prev_html = "    <p>No previous iteration on record.</p>"
+        raw = previous_entry.get("scores")
+        if isinstance(raw, dict):
+            for key, value in raw.items():
+                if key in HANIK_CRITERIA and isinstance(value, (int, float)):
+                    previous_scores[key] = float(value)
 
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>{title}</title>
-</head>
-<body>
-  <h1>{title}</h1>
-  <p>Generated at: {generated}</p>
-
-  <h2>Critique of Previous Iteration</h2>
-{prev_html}
-
-  <h2>Criteria Scores</h2>
-  <table border="1" cellpadding="4" cellspacing="0">
-    <thead>
-      <tr><th>Criterion</th><th>Score</th><th>Description</th></tr>
-    </thead>
-    <tbody>
-{rows_html}
-    </tbody>
-  </table>
-
-  <h2>Recommendations for Next Iteration</h2>
-{rec_html}
-</body>
-</html>
-"""
-
-
-# ---------------------------------------------------------------------------
-# Iteration bound
-# ---------------------------------------------------------------------------
-
-
-def get_max_iterations() -> int:
-    """Return the configured maximum iteration count.
-
-    Reads ``HANIK_MAX_ITERATIONS`` from the environment. Falls back to
-    ``DEFAULT_MAX_ITERATIONS`` if unset, non-numeric, or not a positive
-    integer, so the loop is always bounded.
-    """
-
-    raw = os.environ.get(MAX_ITERATIONS_ENV_VAR)
-    if raw is None:
-        return DEFAULT_MAX_ITERATIONS
-    try:
-        value = int(raw)
-    except ValueError:
-        return DEFAULT_MAX_ITERATIONS
-    if value <= 0:
-        return DEFAULT_MAX_ITERATIONS
-    return value
-
-
-# ---------------------------------------------------------------------------
-# Loop entry point
-# ---------------------------------------------------------------------------
+    return {
+        criterion: round(scores.get(criterion, 0.0) - previous_scores.get(criterion, 0.0), 4)
+        for criterion in HANIK_CRITERIA
+    }
 
 
 def run_iteration(
     state_path: Path = DEFAULT_STATE_PATH,
     reports_dir: Path = DEFAULT_REPORTS_DIR,
+    repo_root: Optional[Path] = None,
     max_iterations: Optional[int] = None,
+    history_limit: Optional[int] = None,
+    stagnation_limit: Optional[int] = None,
+    checks: Optional[Sequence[Check]] = None,
 ) -> IterationResult:
-    """Run a single Hanik improvement-loop iteration.
-
-    1. Load prior state (recovering from corruption if necessary).
-    2. Enforce the maximum iteration guard.
-    3. Critically evaluate the previous iteration against the Hanik
-       criteria and compute new scores.
-    4. Generate recommendations for the next iteration.
-    5. Render and write an escaped HTML report under ``reports_dir``.
-    6. Atomically persist the updated state under ``state_path``.
-    """
+    """Run one Hanik improvement-loop iteration."""
 
     if max_iterations is None:
         max_iterations = get_max_iterations()
+    if history_limit is None:
+        history_limit = get_history_limit()
+    if stagnation_limit is None:
+        stagnation_limit = get_stagnation_limit()
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parents[1]
+    if checks is None:
+        checks = CHECKS
 
     state = load_state(state_path)
     next_iteration = state["iteration"] + 1
-
     if next_iteration > max_iterations:
         raise MaxIterationsReachedError(next_iteration, max_iterations)
 
-    scores = evaluate_previous_iteration(state)
-    recommendations = generate_recommendations(scores)
-    timestamp = datetime.now(timezone.utc).isoformat()
+    context = CheckContext(
+        repo_root=Path(repo_root),
+        state=state,
+        state_path=state_path,
+        reports_dir=reports_dir,
+        history_limit=history_limit,
+    )
+    results = run_checks(context, checks)
+    scores = score_criteria(results)
+    overall = overall_score(scores)
+    open_tasks = [result for result in results if not result.passed]
+
     previous_entry = _previous_entry(state)
+    deltas = compute_deltas(scores, previous_entry)
+    signature = evidence_signature(results)
+
+    previous_signature = previous_entry.get("signature") if previous_entry else None
+    progress = previous_signature != signature
+    stagnant_iterations = 0 if progress else int(state.get("stagnant_iterations") or 0) + 1
+
+    timestamp = datetime.now(timezone.utc).isoformat()
 
     reports_dir.mkdir(parents=True, exist_ok=True)
     report_path = reports_dir / f"iteration-{next_iteration:04d}.html"
-    report_html = render_html_report(
-        next_iteration, timestamp, scores, recommendations, previous_entry
-    )
-    report_path.write_text(report_html, encoding="utf-8")
+    json_report_path = reports_dir / f"iteration-{next_iteration:04d}.json"
+    index_path = reports_dir / "index.html"
+    brief_path = state_path.parent / "next-session.md"
 
-    new_state = copy.deepcopy(state)
+    report_path.write_text(
+        reporting.render_html_report(
+            iteration=next_iteration,
+            timestamp=timestamp,
+            scores=scores,
+            deltas=deltas,
+            overall=overall,
+            results=results,
+            open_tasks=open_tasks,
+            stagnant_iterations=stagnant_iterations,
+            progress=progress,
+        ),
+        encoding="utf-8",
+    )
+    json_report_path.write_text(
+        json.dumps(
+            reporting.render_json_report(
+                iteration=next_iteration,
+                timestamp=timestamp,
+                scores=scores,
+                deltas=deltas,
+                overall=overall,
+                results=results,
+                stagnant_iterations=stagnant_iterations,
+                progress=progress,
+            ),
+            indent=2,
+            ensure_ascii=True,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    index_path.write_text(reporting.render_index_html(reports_dir), encoding="utf-8")
+
+    brief_path.parent.mkdir(parents=True, exist_ok=True)
+    brief_path.write_text(
+        reporting.render_session_brief(
+            iteration=next_iteration,
+            timestamp=timestamp,
+            scores=scores,
+            overall=overall,
+            results=results,
+            open_tasks=open_tasks,
+            stagnant_iterations=stagnant_iterations,
+            progress=progress,
+        ),
+        encoding="utf-8",
+    )
+
+    new_state = dict(state)
     new_state["iteration"] = next_iteration
-    new_state.setdefault("history", []).append(
+    new_state["stagnant_iterations"] = stagnant_iterations
+    new_state["history"] = list(state.get("history") or [])
+    new_state["history"].append(
         {
             "iteration": next_iteration,
             "timestamp": timestamp,
             "scores": scores,
-            "recommendations": recommendations,
-            "report_path": str(report_path.as_posix()),
+            "deltas": deltas,
+            "overall_score": overall,
+            "signature": signature,
+            "progress": progress,
+            "open_tasks": [task.id for task in open_tasks],
+            "report_path": report_path.as_posix(),
+            "json_report_path": json_report_path.as_posix(),
         }
     )
-
+    prune_history(new_state, state_path, history_limit)
     save_state_atomic(new_state, state_path)
+
+    should_continue = (
+        continuation_enabled()
+        and bool(open_tasks)
+        and stagnant_iterations < stagnation_limit
+        and next_iteration < max_iterations
+    )
 
     return IterationResult(
         iteration=next_iteration,
         timestamp=timestamp,
         scores=scores,
-        recommendations=recommendations,
+        deltas=deltas,
+        overall=overall,
+        results=results,
+        open_tasks=open_tasks,
+        progress=progress,
+        stagnant_iterations=stagnant_iterations,
+        should_continue=should_continue,
         report_path=report_path,
+        json_report_path=json_report_path,
+        index_path=index_path,
+        brief_path=brief_path,
         state_path=state_path,
         state=new_state,
     )
+
+
+def workflow_outputs(result: IterationResult) -> Dict[str, str]:
+    """Return the key/value pairs the GitHub Actions workflow consumes."""
+
+    return {
+        "status": "success",
+        "iteration": str(result.iteration),
+        "overall_score": f"{result.overall:.4f}",
+        "checks_passed": str(sum(1 for check in result.results if check.passed)),
+        "checks_total": str(len(result.results)),
+        "open_tasks": str(len(result.open_tasks)),
+        "progress": "true" if result.progress else "false",
+        "stagnant_iterations": str(result.stagnant_iterations),
+        "should_continue": "true" if result.should_continue else "false",
+    }
+
+
+def write_github_output(outputs: Dict[str, str], path: Optional[str] = None) -> bool:
+    """Append ``outputs`` to the GitHub Actions output file, if running there."""
+
+    target = path or os.environ.get("GITHUB_OUTPUT")
+    if not target:
+        return False
+    with open(target, "a", encoding="utf-8") as handle:
+        for key, value in outputs.items():
+            handle.write(f"{key}={value}\n")
+    return True
+
+
+def _summarise(result: IterationResult) -> str:
+    passed = sum(1 for check in result.results if check.passed)
+    progress_line = f"  Progress      : {'yes' if result.progress else 'no'}"
+    if not result.progress:
+        progress_line += f" (unchanged for {result.stagnant_iterations} iteration(s))"
+
+    lines = [
+        f"Hanik iteration {result.iteration} complete.",
+        f"  Overall score : {result.overall:.2f} ({passed}/{len(result.results)} checks passing)",
+        progress_line,
+        f"  Open tasks    : {len(result.open_tasks)}",
+        f"  Report        : {result.report_path}",
+        f"  Brief         : {result.brief_path}",
+        f"  State         : {result.state_path}",
+    ]
+    if result.open_tasks:
+        top = result.open_tasks[0]
+        lines.append(f"  Next task     : {top.id} - {top.remediation}")
+    else:
+        lines.append("  Next task     : none open; add a check that raises the bar.")
+    if not result.should_continue:
+        lines.append("  Continuation  : stopped; a session must act before another run can help.")
+    return "\n".join(lines)
 
 
 def main() -> int:
@@ -472,11 +385,11 @@ def main() -> int:
         result = run_iteration()
     except MaxIterationsReachedError as exc:
         print(str(exc))
+        write_github_output({"status": "max-iterations", "should_continue": "false"})
         return 1
 
-    print(f"Hanik loop iteration {result.iteration} complete.")
-    print(f"Report: {result.report_path}")
-    print(f"State: {result.state_path}")
+    print(_summarise(result))
+    write_github_output(workflow_outputs(result))
     return 0
 
 

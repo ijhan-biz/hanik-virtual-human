@@ -1,125 +1,185 @@
 # Hanik Virtual-Human Specification
 
-This document defines the identity, behavioral, and evaluation requirements
-for the "Hanik" virtual human, and the criteria used by the automated
-improvement loop (`src/hanik_loop.py`) to evaluate each iteration.
+This document defines what Hanik must be, and it is the source the evaluation
+criteria mirror. Each criterion below is measured by named checks in
+`src/checks.py`; the check IDs are listed so a requirement can be traced to the
+evidence that proves it.
 
-Every clause is explicitly labeled **Requirement** (must hold today, is
-tested or enforced by tooling) or **Hypothesis** (a design idea, aspiration,
-or future direction that is not yet enforced and may change). This
-distinction exists so that no one — human reviewer or automated agent —
-mistakes an untested idea for a guaranteed property of the system.
+Every clause is labeled **Requirement** (holds today and is enforced by a
+check) or **Hypothesis** (a direction that is not yet enforced). The
+distinction exists so no one — human or automated session — mistakes an
+untested idea for a guaranteed property.
+
+A requirement without a check is an opinion. If you add a requirement here, add
+the check that proves it in the same change.
+
+## 0. What Hanik is
+
+Hanik is a virtual human: an AI assistant with a defined identity, voice,
+refusal behaviour, and escalation policy, specified in `hanik/`. It is not a
+person, and the specification exists partly to keep that unambiguous under
+pressure.
 
 ## 1. Identity
 
-- **Requirement:** Hanik must always identify itself as a non-human,
-  AI-based assistant. It must never claim to be a human, a licensed
-  professional (e.g. doctor, lawyer), or a specific real person.
-- **Requirement:** Generated artifacts (reports, commit messages, PR
-  descriptions) must clearly state they were produced by an automated loop,
-  including the iteration number and timestamp.
-- **Hypothesis:** A persistent "persona" (name, tone, avatar) may be layered
-  on top of the assistant identity in the future, but it must never obscure
-  the underlying AI disclosure above.
+_Checks: `identity.persona_exists`, `identity.ai_disclosure`,
+`identity.impersonation_boundaries`, `identity.example_exchanges`,
+`identity.multilingual_persona`_
+
+- **Requirement:** A persona artifact exists at `hanik/persona.md` and is
+  substantive, not a stub.
+- **Requirement:** The persona contains the disclosure sentence "Hanik is an AI
+  assistant, not a human being." verbatim, and states when it is repeated.
+- **Requirement:** The persona enumerates at least four impersonation
+  boundaries — human, specific real person, licensed professional, unearned
+  credentials.
+- **Requirement:** Identity behaviour is demonstrated in at least three
+  complete example exchanges, not merely asserted in prose. Assertions are easy
+  to satisfy and hard to verify; examples show what the rule looks like when a
+  user pushes back.
+- **Requirement:** Personality never overrides disclosure. If a framing forces
+  a choice between staying in character and being honest, Hanik breaks
+  character.
+- **Requirement (open):** The persona is defined in a second language rather
+  than assumed to translate. Currently failing: `hanik/persona.ko.md` does not
+  exist.
 
 ## 2. Transparency
 
-- **Requirement:** Every iteration produces a human-readable HTML report
-  under `reports/` that records: the criteria evaluated, the score assigned
-  to each, and the recommendations generated for the next iteration.
-- **Requirement:** All report content derived from state or external input
-  is HTML-escaped before rendering, so the report cannot be used to smuggle
-  hidden markup, scripts, or misleading formatting.
-- **Requirement:** Known limitations of the loop (see `DECISIONS.md`) are
-  documented rather than silently hidden.
-- **Hypothesis:** Future iterations may add machine-readable (JSON/JSON-LD)
-  companions to the HTML report for programmatic consumption.
+_Checks: `transparency.previous_html_report`,
+`transparency.previous_json_report`, `transparency.report_index`,
+`transparency.session_brief`, `transparency.known_limitations`_
+
+- **Requirement:** Every iteration writes a human-readable HTML report
+  recording each check, its result, and the evidence behind it.
+- **Requirement:** Every report has a machine-readable JSON companion, so the
+  trail can be consumed programmatically instead of scraped.
+- **Requirement:** Reports are indexed at `reports/index.html`.
+- **Requirement:** Every iteration writes `state/next-session.md`, the brief
+  the next session reads before doing anything.
+- **Requirement:** All report content derived from state or check evidence is
+  HTML-escaped, so nothing can smuggle markup or misleading formatting into a
+  report.
+- **Requirement:** Hanik's limitations are disclosed in the persona, at least
+  three of them, concretely.
+- **Requirement:** Evidence strings are repository-relative, so a committed
+  report never leaks the filesystem layout of the machine that produced it.
 
 ## 3. Human Control
 
-- **Requirement:** The improvement loop only runs when explicitly triggered
-  by a human (`workflow_dispatch`) or by an automated dispatch chain
-  (`repository_dispatch`) that runs one bounded batch at a time. Each batch
-  defaults to 50 iterations, and setting `HANIK_CONTINUOUS=false` stops
-  automatic continuation.
-- **Requirement:** A human can stop the loop at any time by not re-running
-  the workflow, revoking the dispatch token, or setting
-  `HANIK_CONTINUOUS=false`.
-- **Requirement:** Every generated change (reports, state) is delivered via
-  a pull request, subject to normal human review and merge gating, not
-  pushed directly to the default branch by an unattended process.
-- **Hypothesis:** A future "kill switch" repository variable could be
-  checked at the very start of the workflow to short-circuit execution
-  even before checkout, for defense in depth.
+_Checks: `human_control.no_schedule_trigger`, `human_control.kill_switch`,
+`human_control.continuous_flag`, `human_control.stop_procedure`_
+
+- **Requirement:** The loop never starts itself on a timer. There is no
+  `schedule:` trigger.
+- **Requirement:** A kill switch (`HANIK_KILL_SWITCH`) is evaluated before
+  checkout, so a human can stop the loop without revoking secrets, cancelling
+  runs, or editing the workflow.
+- **Requirement:** Continuation is opt-out through `HANIK_CONTINUOUS`.
+- **Requirement:** The stop procedure is documented in `SECURITY.md` as
+  numbered steps.
+- **Requirement:** Every generated change is delivered as a pull request,
+  subject to normal review, and never pushed to the default branch by an
+  unattended process.
 
 ## 4. Safety
 
-- **Requirement:** The loop never executes recommendations automatically;
-  recommendations are descriptive text for a human to act on, not commands
-  that are run.
-- **Requirement:** The loop performs no network calls and depends on no
-  external LLM or third-party API, eliminating an entire class of prompt
-  injection, data exfiltration, and unpredictable-output risks.
-- **Requirement:** All scores are bounded (`BASE_SCORE` .. `MAX_SCORE`) and
-  each workflow dispatch is bounded by `HANIK_BATCH_SIZE`, so a single run
-  cannot consume unbounded compute.
-- **Hypothesis:** If a future iteration integrates a real LLM, it must first
-  add prompt-injection defenses described in `SECURITY.md` before that
-  capability is enabled by default.
+_Checks: `safety.no_network_imports`, `safety.no_dynamic_execution`,
+`safety.policy_sections`, `safety.escaping_regression_test`,
+`safety.red_team_suite`_
+
+- **Requirement:** Refusal behaviour is specified in
+  `hanik/policies/safety.md`, covering refusal style, at least five harm
+  categories, and escalation.
+- **Requirement:** The loop never executes a recommendation. Remediation text
+  is inert data that is rendered, never run. Enforced by an AST scan, not by
+  convention: no `eval`, `exec`, `compile`, `__import__`, no subprocess-style
+  imports, no `os` process spawning anywhere in `src/`.
+- **Requirement:** The loop makes no network calls and imports no networking
+  module. Also enforced by AST scan.
+- **Requirement:** The escaping guarantee in §2 is covered by a regression
+  test.
+- **Requirement (open):** Adversarial cases are tested. Currently failing:
+  `tests/test_red_team.py` does not exist.
+- **Hypothesis:** If a future iteration integrates a real LLM, the
+  prompt-injection defenses in `SECURITY.md` must be designed and reviewed
+  before that capability is enabled by default.
 
 ## 5. Privacy
 
-- **Requirement:** The loop must not collect, request, or store personal
-  data about any individual. State and reports contain only criteria
-  names, scores, recommendation text, and timestamps.
-- **Requirement:** No secrets, tokens, or credentials are ever written to
-  `state/state.json` or `reports/*.html`.
-- **Hypothesis:** If user-submitted content is ever incorporated into the
-  loop, it must be reviewed for PII and redacted before being persisted.
+_Checks: `privacy.no_pii_in_outputs`, `privacy.no_secrets_in_outputs`,
+`privacy.policy_sections`_
+
+- **Requirement:** No personal data is collected, requested, or stored.
+  Generated artifacts contain criterion names, scores, static remediation text,
+  repository-relative paths, and timestamps.
+- **Requirement:** Generated artifacts are scanned every iteration for e-mail
+  addresses, phone-shaped strings, and known credential formats. A hit fails a
+  check and becomes the top task in the next brief.
+- **Requirement:** `hanik/policies/privacy.md` documents what is collected, how
+  long it is kept, and how it is redacted.
+- **Hypothesis:** If user-submitted content is ever incorporated, redaction
+  must ship together with a test that proves it.
 
 ## 6. Memory
 
-- **Requirement:** State is persisted in `state/state.json` and updated
-  atomically (temp file + `os.replace`), so a crash or concurrent write can
-  never leave state truncated or corrupted.
-- **Requirement:** If `state/state.json` is missing or corrupted, the loop
-  recovers automatically to a fresh, valid empty state rather than
-  crashing or silently propagating bad data.
-- **Requirement:** Each iteration's full evaluation (scores, recommendations,
-  report path, timestamp) is appended to `history` so later iterations, and
-  human reviewers, can audit the trajectory of the loop over time.
-- **Hypothesis:** History may be pruned or archived after a large number of
-  iterations to keep `state/state.json` from growing unbounded; this is not
-  yet implemented.
+_Checks: `memory.atomic_write`, `memory.corruption_recovery_test`,
+`memory.history_bounded`, `memory.archive_lossless`_
 
-## 7. Evaluation Criteria
+- **Requirement:** State is written through a temporary file, fsynced, and
+  installed with `os.replace`, so a crash or concurrent write can never leave
+  `state/state.json` truncated.
+- **Requirement:** A missing, unparsable, or structurally invalid state file
+  recovers to a fresh valid state instead of raising, and the recovery is
+  covered by a test. The reset is visible in the next report.
+- **Requirement:** A state file written by an older schema is migrated, not
+  discarded.
+- **Requirement:** `state/state.json` retains at most `HANIK_HISTORY_LIMIT`
+  entries, so the file read on every iteration cannot grow without bound.
+- **Requirement:** Pruning is lossless. Entries removed from the working state
+  are written to `state/archive/` first, and the loop verifies that the number
+  of archived entries on disk covers everything it claims to have pruned.
 
-The loop evaluates each iteration against eight explicit criteria,
-mirroring the sections above: `identity`, `transparency`, `human_control`,
-`safety`, `privacy`, `memory`, `evaluation`, and `oversight`. Each criterion
-is scored between `0.0` and `0.95` (see `DECISIONS.md` for why `1.0` is
-deliberately unreachable), and any criterion below the target score of
-`0.9` generates a concrete recommendation for the next iteration.
+## 7. Evaluation
 
-- **Requirement:** Every iteration must critically re-evaluate the previous
-  iteration's scores and recommendations rather than treating them as
-  already resolved; scores only improve for criteria that had an open
-  recommendation last time (see `evaluate_previous_iteration` in
-  `src/hanik_loop.py`).
-- **Hypothesis:** Additional criteria (e.g. accessibility, localization)
-  may be added in future iterations; adding a criterion should never
-  silently invalidate historical scores for existing criteria.
+_Checks: `evaluation.evidence_coverage`, `evaluation.delta_recorded`,
+`evaluation.stagnation_tracked`, `evaluation.benchmark_scenarios`_
+
+- **Requirement:** A criterion's score is the share of its checks that pass,
+  computed from the repository as it is on disk. No score component is carried
+  forward, assumed, or incremented for effort.
+- **Requirement:** Every criterion is backed by at least three checks.
+- **Requirement:** Each iteration records a per-criterion delta against its
+  predecessor.
+- **Requirement:** Each iteration records an evidence signature, and repeated
+  identical signatures are counted and surfaced as stagnation. A loop that has
+  stopped improving must say so rather than continue producing identical
+  reports.
+- **Requirement (open):** Behavioural regressions are detectable against fixed
+  scenarios. Currently failing: `hanik/benchmarks/` does not exist.
+- **Requirement:** All checks passing is treated as a bar that is too low, not
+  as completion. The report and brief both demand a new check in that state.
+- **Hypothesis:** Additional criteria (accessibility, localization coverage)
+  may be added; adding one must never silently invalidate historical scores for
+  existing criteria.
 
 ## 8. Oversight
 
-- **Requirement:** All loop output is delivered as a pull request. No
+_Checks: `oversight.least_privilege`, `oversight.pull_request_delivery`,
+`oversight.no_auto_merge`, `oversight.failure_stops_chain`,
+`oversight.session_contract`_
+
+- **Requirement:** All loop output is delivered as a pull request, and no
   automated process merges its own pull request.
-- **Requirement:** The GitHub Actions workflow requests least-privilege
-  permissions (`contents: write`, `pull-requests: write` only where
-  needed) and never grants itself administrative or org-wide scopes.
-- **Requirement:** A failed run does not trigger the next iteration's
-  dispatch; only a successful run may optionally chain forward, and only
-  when `HANIK_CONTINUOUS=true` is explicitly set.
-- **Hypothesis:** A future iteration may add a required human "approve to
-  continue" step between iterations, rather than relying solely on the
-  `HANIK_CONTINUOUS` flag and PR review.
+- **Requirement:** The workflow requests only `contents: write` and
+  `pull-requests: write`, and never administrative or org-wide scopes.
+- **Requirement:** Continuation is gated on the loop's own `should_continue`
+  output, so a failed or stagnant run stops the chain.
+- **Requirement:** `AGENTS.md` states the contract every fresh session follows,
+  because a session starts with no memory of the previous one.
+- **Requirement:** A session must not weaken a check to make it pass. This is
+  the one failure mode the loop cannot detect about itself, which is why it is
+  stated in `AGENTS.md`, in the generated brief, and here.
+- **Hypothesis:** A future iteration may require an explicit human approval
+  step between iterations rather than relying on `HANIK_CONTINUOUS`, the kill
+  switch, and pull-request review.

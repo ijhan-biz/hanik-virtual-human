@@ -1,34 +1,49 @@
 # hanik-virtual-human
 
-An automated, self-critiquing improvement loop for the "Hanik" virtual
-human project. Each iteration reads the prior state, critically evaluates
-it against explicit criteria, generates recommendations for the next
-iteration, writes a complete HTML report, and atomically updates the
-persisted state -- entirely offline, with no external LLM or provider
-credentials required.
+An automated improvement loop for **Hanik**, a virtual human. Each iteration
+measures Hanik against explicit, file-backed evidence, writes a report, and
+hands the next session a concrete task. It runs entirely offline: no LLM
+provider, no network access, no credentials.
 
-## What this is
+The thing being improved is `hanik/` — the persona, its policies, and its
+benchmarks. Everything else exists to measure that artifact and to keep a
+human in control of what lands.
 
-- **`src/hanik_loop.py`** -- the core loop. Provider-neutral and
-  offline-capable: it makes no network calls and requires no API keys.
-  See the module docstring for the full design rationale.
-- **`tests/test_hanik_loop.py`** -- unit tests covering a full loop run,
-  HTML escaping of untrusted content, corrupted-state recovery, atomic
-  state writes, and the maximum-iteration guard.
-- **`.github/workflows/hanik-loop.yml`** -- a GitHub Actions workflow that
-  runs the loop's tests, executes a 50-iteration batch, and (only when
-  explicitly configured) opens/continues a pull request with the
-  generated report and state. See [Continuous mode](#continuous-mode)
-  below.
-- **`HANIK_SPEC.md`** -- the specification for what Hanik must do
-  (identity, transparency, human control, safety, privacy, memory,
-  evaluation criteria, oversight), explicitly distinguishing hard
-  requirements from open hypotheses.
-- **`SECURITY.md`** -- the threat model: prompt/data injection, secrets
-  handling, untrusted MCP servers, least privilege, cost/rate controls,
-  retention, and emergency shutdown.
-- **`DECISIONS.md`** -- why the loop is designed the way it is, and what
-  alternatives were rejected and why.
+## How the loop works
+
+One run of the loop is one iteration, and one iteration is one fresh session:
+
+1. The session reads `state/next-session.md` — the brief left by the previous
+   iteration, listing the failing checks in priority order.
+2. It implements **one** task for real, in `hanik/`, `src/`, `tests/`, or the
+   workflow.
+3. It runs `python3 -m src.hanik_loop`, which re-measures the repository from
+   scratch and regenerates the report, the index, the state, and the brief.
+4. The change is delivered as a pull request for human review.
+5. If open tasks remain and the evidence actually changed, the workflow
+   dispatches one more iteration — a new run, a new session.
+
+The full contract each session follows is in [`AGENTS.md`](AGENTS.md).
+
+## Scores are evidence, not opinion
+
+Each of the eight criteria in [`HANIK_SPEC.md`](HANIK_SPEC.md) — `identity`,
+`transparency`, `human_control`, `safety`, `privacy`, `memory`, `evaluation`,
+`oversight` — is backed by checks in `src/checks.py` that read files on disk:
+persona sections, policy headings, AST scans of `src/`, PII scans of generated
+output, workflow permissions, test function names. A criterion's score is the
+share of its checks that pass, so **a score can only move when an artifact
+moves.**
+
+Every check carries the remediation that would make it pass and the files that
+change should touch, which is what turns a failing check into a task.
+
+> Earlier versions of this loop scored differently: a criterion improved
+> whenever the previous iteration had merely *printed* a recommendation for it.
+> Scores rose on their own, all eight reached target after ~50 runs, and the
+> loop then regenerated an identical report 200 more times while nothing about
+> Hanik was ever built. `reports/iteration-0001.html` through `-0250.html` are
+> that history, kept as a record. See [`DECISIONS.md`](DECISIONS.md) §7.
 
 ## Running locally
 
@@ -38,35 +53,62 @@ python3 -m pytest tests/ -v
 python3 -m src.hanik_loop
 ```
 
-Running `python3 -m src.hanik_loop` performs exactly one iteration: it
-reads `state/state.json` (creating a fresh state if missing or
-corrupted), writes `reports/iteration-NNNN.html`, and atomically updates
-`state/state.json`.
+One invocation performs exactly one iteration. It writes:
+
+| Artifact | Purpose |
+| --- | --- |
+| `reports/iteration-NNNN.html` | Human-readable evidence and open tasks |
+| `reports/iteration-NNNN.json` | Machine-readable companion |
+| `reports/index.html` | Every iteration, newest first |
+| `state/state.json` | Iteration counter, recent history, stagnation counter |
+| `state/archive/` | Older history, pruned but never lost |
+| `state/next-session.md` | The brief for the next session |
 
 ## Continuous mode
 
-By default, the workflow runs 50 iterations when manually triggered
-(`workflow_dispatch`) and successful runs automatically request the next
-50-iteration batch via `repository_dispatch`, continuing from the persisted
-iteration count.
-The following are required:
+The workflow runs one iteration per invocation and then asks for the next one,
+so each iteration is an independent session on a clean runner. Continuation is
+earned, not automatic: the loop sets `should_continue` only when the run
+succeeded, open tasks remain, the evidence changed recently, and continuation
+was not disabled.
 
-- `HANIK_CONTINUOUS` is not set to `false` (set it to `false` to stop
-  continuation).
-- The repository secret `HANIK_DISPATCH_TOKEN` exists and is a
-  minimally-scoped token dedicated to this purpose (see `SECURITY.md`).
-- `HANIK_BATCH_SIZE` is a positive integer (defaults to `50`).
+Requirements for the chain to continue:
 
-A failed run never triggers the next iteration. See `SECURITY.md` for the
-full emergency-shutdown procedure and why a separate dispatch token (rather
-than the default `GITHUB_TOKEN`) is used intentionally.
+- `HANIK_KILL_SWITCH` is not `true` (checked before checkout).
+- `HANIK_CONTINUOUS` is not `false`.
+- The repository secret `HANIK_DISPATCH_TOKEN` exists — a minimally-scoped
+  token dedicated to this one purpose (see [`SECURITY.md`](SECURITY.md)).
 
-## Criteria at a glance
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `HANIK_KILL_SWITCH` | unset | `true` stops the workflow before it does anything |
+| `HANIK_CONTINUOUS` | `true` | `false` stops the chain after the current run |
+| `HANIK_STAGNATION_LIMIT` | `2` | Consecutive no-change iterations before stopping |
+| `HANIK_HISTORY_LIMIT` | `50` | History entries kept in `state/state.json` |
+| `HANIK_MAX_ITERATIONS` | `10000` | Absolute ceiling on the iteration counter |
 
-The loop evaluates every iteration against eight criteria defined in
-`HANIK_SPEC.md`: `identity`, `transparency`, `human_control`, `safety`,
-`privacy`, `memory`, `evaluation`, and `oversight`. Each criterion is
-scored between `0.0` and `0.95` (see `DECISIONS.md` for why a "perfect"
-score is deliberately unreachable), and any criterion below the target
-score generates a recommendation captured in that iteration's report and
-state history.
+A failed run never chains. Neither does a stagnant one: if the evidence has not
+changed for `HANIK_STAGNATION_LIMIT` iterations, re-running cannot help, so the
+workflow stops and says why in the job summary.
+
+## The loop cannot finish
+
+All checks passing means the bar is too low, not that Hanik is done. In that
+state the report and the brief both say the same thing: add a check for a
+capability Hanik genuinely lacks, and let the next iteration fail it.
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `hanik/persona.md` | Identity, voice, limitations, escalation |
+| `hanik/policies/` | Safety and privacy policies |
+| `hanik/benchmarks/` | Behavioural regression scenarios |
+| `src/checks.py` | Evidence checks; failing ones are the backlog |
+| `src/hanik_loop.py` | Orchestration, scoring, stagnation detection |
+| `src/reporting.py` | Report, JSON companion, index, session brief |
+| `src/state.py` | Atomic writes, pruning, lossless archive |
+| `AGENTS.md` | What every session must do |
+| `HANIK_SPEC.md` | Requirements vs. hypotheses, per criterion |
+| `SECURITY.md` | Threat model and emergency shutdown |
+| `DECISIONS.md` | Why it is built this way, and what was rejected |

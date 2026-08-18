@@ -6,10 +6,16 @@ maintainers and any automated agent operating on this repository.
 
 ## Design principles
 
-- **No secrets in state or reports.** `state/state.json` and `reports/*.html`
-  contain only criteria names, numeric scores, static recommendation text,
-  and timestamps. Nothing derived from environment variables, tokens, or
-  external services is ever written to these files.
+- **No secrets in state or reports.** `state/state.json`, `reports/*`, and
+  `state/next-session.md` contain only criterion names, numeric scores, static
+  remediation text, repository-relative paths, and timestamps. Nothing derived
+  from environment variables, tokens, or external services is ever written to
+  these files, and `privacy.no_secrets_in_outputs` re-scans them every
+  iteration rather than trusting that guarantee.
+- **Paths in output are repository-relative.** Evidence strings never contain
+  an absolute path, so a committed report cannot disclose the filesystem
+  layout, user account, or directory structure of the machine that produced
+  it.
 - **Offline by default.** `src/hanik_loop.py` makes no network calls and
   calls no LLM provider. This removes prompt injection, data exfiltration,
   and unpredictable third-party output as attack surfaces for the loop
@@ -26,14 +32,19 @@ maintainers and any automated agent operating on this repository.
   trusted history (e.g. `state/state.json`, which is repository-controlled
   but still treated as untrusted input in code) is passed through
   `html.escape()` before being embedded in generated HTML reports. See
-  `render_html_report()` in `src/hanik_loop.py` and the corresponding tests
-  in `tests/test_hanik_loop.py::test_html_report_escapes_untrusted_state_content`.
+  `render_html_report()` in `src/reporting.py` and the corresponding test
+  `tests/test_hanik_loop.py::test_html_report_escapes_untrusted_state_content`,
+  which is itself required by the `safety.escaping_regression_test` check.
 - If a future iteration integrates an LLM, all model output must be
   treated as untrusted: it must never be interpolated into shell commands,
   file paths, or executed directly, and must be escaped the same way state
   content is escaped today.
-- The loop never parses or executes recommendation text; it is inert,
-  human-readable strings only.
+- The loop never parses or executes remediation text; it is inert,
+  human-readable string data that is rendered and never run. This is enforced
+  by AST scans over `src/` (`safety.no_dynamic_execution`,
+  `safety.no_network_imports`), not by convention: no `eval`, `exec`,
+  `compile`, or `__import__`, no subprocess-style imports, no `os` process
+  spawning, and no networking imports anywhere in the loop's own code.
 
 ## Secrets
 
@@ -97,40 +108,56 @@ these rules:
 - The workflow (`.github/workflows/hanik-loop.yml`) sets a job-level
   `timeout-minutes` so a hung or misbehaving run cannot consume runner
   minutes indefinitely.
-- `HANIK_BATCH_SIZE` bounds the number of iterations in each workflow run
-  (default `50`); the workflow advances the per-batch maximum from the
-  persisted state before starting each batch.
+- Each workflow run performs exactly **one** iteration, so no single run can
+  accumulate unbounded work. Continuation requires a fresh dispatch that the
+  loop only requests when it reports progress and remaining tasks.
+- Stagnation detection (`HANIK_STAGNATION_LIMIT`, default `2`) stops the chain
+  when the evidence has not changed, so a loop with nothing left to do cannot
+  keep consuming runner minutes.
+- `HANIK_MAX_ITERATIONS` (default `10000`) is an absolute backstop on the
+  iteration counter.
 - `concurrency` is configured in the workflow so overlapping runs on the
   same ref cancel or queue rather than running in parallel and racing on
   `state/state.json`.
 
 ## Retention
 
-- `reports/` accumulates one HTML file per iteration under version control,
-  giving a permanent, auditable history. Each workflow run is bounded by
-  `HANIK_BATCH_SIZE`, while deliberate continuation can create additional
-  batches.
-- `state/state.json` retains a `history` array of all past iterations.
-  Pruning/archival strategies for very long histories are a documented
-  hypothesis in `HANIK_SPEC.md`, not yet implemented.
-- No personal data is ever retained (see `HANIK_SPEC.md` §5 Privacy).
+- `reports/` accumulates one HTML file and one JSON companion per iteration
+  under version control, giving a permanent, auditable history indexed at
+  `reports/index.html`.
+- `state/state.json` retains at most `HANIK_HISTORY_LIMIT` history entries
+  (default `50`), so the file read on every iteration cannot grow without
+  bound.
+- Pruning is **lossless**. Entries removed from the working state are written
+  to `state/archive/history-NNNN-NNNN.json` before removal, and the loop
+  verifies that the archived entries on disk cover everything it claims to
+  have pruned. Nothing is deleted; it is relocated.
+- No personal data is ever retained (see `HANIK_SPEC.md` §5 Privacy), and
+  generated artifacts are scanned each iteration for e-mail addresses,
+  phone-shaped strings, and known credential formats.
 
 ## Emergency shutdown
 
 To stop the loop immediately:
 
-1. Do not re-run or approve the `workflow_dispatch` / `repository_dispatch`
-   trigger. The loop never schedules itself; it only runs when explicitly
-   invoked.
-2. Set the repository variable/secret `HANIK_CONTINUOUS` to `false` (or
-   delete it). The workflow will not perform the completion-triggered
-   dispatch to the next iteration unless this is explicitly `true`.
-3. Revoke or delete the `HANIK_DISPATCH_TOKEN` repository secret. Without
-   it, the dispatch step that requests the next iteration cannot
-   authenticate.
-4. If a run is currently in progress, cancel it from the Actions tab (this
-   is also covered by the workflow's `concurrency` group, which lets a new
-   dispatch supersede/cancel an in-flight one if configured to do so).
+1. Set the repository variable `HANIK_KILL_SWITCH` to `true`. This is the
+   fastest and most complete control: it is evaluated at the job level, before
+   checkout, so a run triggered afterwards does nothing at all. It requires no
+   secret rotation and is reversible by clearing the variable.
+2. Set the repository variable `HANIK_CONTINUOUS` to `false`. The workflow
+   completes the current run but does not request the next iteration.
+3. Revoke or delete the `HANIK_DISPATCH_TOKEN` repository secret. Without it,
+   the dispatch step that requests the next iteration cannot authenticate, and
+   the chain cannot continue regardless of the variables above.
+4. If a run is currently in progress, cancel it from the Actions tab. The
+   workflow's `concurrency` group also lets a new dispatch supersede an
+   in-flight one.
+5. Close any open pull request the loop has raised. Nothing the loop produces
+   takes effect until a human merges it, so an unreviewed pull request is
+   inert.
+
+Steps 1 and 3 are independently sufficient. Step 1 is preferred for a routine
+pause; step 3 is the correct response if the token itself may be compromised.
 
 ## Why ordinary `GITHUB_TOKEN` recursion is restricted (and why that's fine)
 

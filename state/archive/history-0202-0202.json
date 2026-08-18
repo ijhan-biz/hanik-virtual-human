@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "iteration": 202,
+      "recommendations": [],
+      "report_path": "reports/iteration-0202.html",
+      "scores": {
+        "evaluation": 0.9,
+        "human_control": 0.9,
+        "identity": 0.9,
+        "memory": 0.9,
+        "oversight": 0.9,
+        "privacy": 0.9,
+        "safety": 0.9,
+        "transparency": 0.9
+      },
+      "timestamp": "2026-08-16T23:59:22.759677+00:00"
+    }
+  ],
+  "first_iteration": 202,
+  "last_iteration": 202
+}
