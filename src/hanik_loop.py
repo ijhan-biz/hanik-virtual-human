@@ -298,9 +298,12 @@ def run_iteration(
     prune_history(new_state, state_path, history_limit)
     save_state_atomic(new_state, state_path)
 
+    # A clean score is not a terminal state. The implementation session must
+    # raise the bar with a new evidence check, so the next run still has a
+    # concrete change to make. Stagnation remains the safety stop when that
+    # implementation session fails to change any measured outcome.
     should_continue = (
         continuation_enabled()
-        and bool(open_tasks)
         and stagnant_iterations < stagnation_limit
         and next_iteration < max_iterations
     )

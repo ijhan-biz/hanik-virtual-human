@@ -882,6 +882,27 @@ def _session_contract(ctx: CheckContext) -> Outcome:
     return _ok(f"{AGENTS_DOC_PATH} defines the contract every fresh session follows.")
 
 
+def _implementation_agent(ctx: CheckContext) -> Outcome:
+    text = ctx.read(WORKFLOW_PATH)
+    if text is None:
+        return _missing(WORKFLOW_PATH)
+    required = (
+        "npm install --global @github/copilot",
+        "copilot -p",
+        "state/next-session.md",
+        "--no-ask-user",
+        "COPILOT_GITHUB_TOKEN",
+    )
+    missing = [token for token in required if token not in text]
+    if missing:
+        return _fail(
+            f"{WORKFLOW_PATH} does not launch a fresh implementation session; missing: "
+            + ", ".join(missing)
+            + "."
+        )
+    return _ok("The workflow launches Copilot CLI from the next-session brief before evaluating.")
+
+
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
@@ -1256,6 +1277,17 @@ CHECKS: Tuple[Check, ...] = (
         ),
         targets=(AGENTS_DOC_PATH,),
         run=_session_contract,
+    ),
+    Check(
+        id="oversight.implementation_agent",
+        criterion="oversight",
+        title="Each iteration has an implementation session",
+        remediation=(
+            "Run Copilot CLI with COPILOT_GITHUB_TOKEN in the workflow, give it state/next-session.md "
+            "and --no-ask-user, and require it to change the repository before the evaluator runs."
+        ),
+        targets=(WORKFLOW_PATH, "state/next-session.md"),
+        run=_implementation_agent,
     ),
 )
 

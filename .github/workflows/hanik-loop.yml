@@ -1,20 +1,21 @@
 name: Hanik Improvement Loop
 
 # One run of this workflow is one iteration of the Hanik improvement loop, and
-# one iteration is one fresh session: the runner starts clean, the loop reads
-# everything it needs from the repository, and it leaves a brief for whoever
-# runs next.
+# one iteration is one fresh implementation session followed by one evaluation:
+# the runner starts clean, the agent reads the brief, changes the repository,
+# and the evaluator measures that change.
 #
 # Triggers:
 #   - workflow_dispatch: a human starts the chain.
 #   - repository_dispatch (type: hanik-continue): this workflow asking for one
-#     more iteration, using a dedicated HANIK_DISPATCH_TOKEN, and only when the
-#     loop itself reported should_continue=true.
+#     more implementation session, using a dedicated HANIK_DISPATCH_TOKEN, and
+#     only when the loop itself reported should_continue=true.
 #
 # There is deliberately no schedule trigger and no in-process loop. The loop
-# stops asking for another run when there are no open tasks, when the evidence
-# has stopped changing, or when a human sets HANIK_CONTINUOUS=false or
-# HANIK_KILL_SWITCH=true.
+# stops asking for another run when evidence has stopped changing, when the
+# safety ceiling is reached, or when a human sets HANIK_CONTINUOUS=false or
+# HANIK_KILL_SWITCH=true. A clean score starts another implementation session
+# that must add a new evidence check rather than ending the chain.
 
 on:
   workflow_dispatch:
@@ -55,13 +56,48 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Copilot CLI
+        run: npm install --global @github/copilot
+
+      - name: Implement one brief task
+        id: implement
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          before="$(git rev-parse HEAD)"
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "The implementation session must start from a clean checkout." >&2
+            exit 1
+          fi
+          prompt="$(cat state/next-session.md)"
+          copilot -p "You are the Hanik implementation session. Read AGENTS.md first, then implement exactly the first task in the session brief below. Work on the actual artifact, not on weakening checks. If all checks currently pass, add one substantive evidence check for a capability Hanik genuinely lacks, with remediation and targets. You may update directly related documentation and tests. Do not add secrets, network access, dynamic execution, a timer trigger, or any self-approval step. Do not run src.hanik_loop; the workflow runs the evaluator after you. Run the focused tests needed for your change, leave the repository with the implementation in place, and do not wait for a user response. Session brief:
+          ${prompt}" \
+            --allow-tool='shell(git:*)' \
+            --allow-tool='shell(python3:*)' \
+            --allow-tool=write \
+            --no-ask-user
+          after="$(git rev-parse HEAD)"
+          changed="$(git status --porcelain)"
+          if [ "$before" = "$after" ] && [ -z "$changed" ]; then
+            echo "The implementation session made no repository change; stopping instead of fabricating progress." >&2
+            exit 1
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git status --short
+
       - name: Install dependencies
         run: python3 -m pip install -r requirements-dev.txt
 
       - name: Run tests
         run: python3 -m pytest tests/ -v
 
-      - name: Run one Hanik iteration
+      - name: Evaluate one Hanik iteration
         id: iterate
         env:
           # Absolute ceiling on the iteration counter. Stagnation detection,
@@ -118,14 +154,22 @@ jobs:
             A human reviews and lands this; the loop never lands its own work.
           branch: hanik-loop/iteration-results
           add-paths: |
+            hanik/
+            src/
+            tests/
             reports/
             state/
+            README.md
+            HANIK_SPEC.md
+            DECISIONS.md
+            SECURITY.md
+            AGENTS.md
           labels: hanik-loop
 
-      # Continuation is earned: the loop sets should_continue only when the run
-      # succeeded, open tasks remain, the evidence actually changed recently,
-      # and HANIK_CONTINUOUS was not disabled. A failed step leaves the output
-      # unset, so a failure silently stops the chain.
+      # Continuation is earned: the implementation and evaluation succeeded,
+      # evidence changed recently (or a clean score requires a new check), and
+      # HANIK_CONTINUOUS was not disabled. A failed step leaves the output
+      # unset, so a failure stops the chain.
       #
       # The dispatch uses a dedicated HANIK_DISPATCH_TOKEN rather than the
       # default GITHUB_TOKEN, because GitHub Actions intentionally refuses to

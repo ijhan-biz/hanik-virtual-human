@@ -176,14 +176,18 @@ _Checks: `evaluation.evidence_coverage`, `evaluation.delta_recorded`,
 
 _Checks: `oversight.least_privilege`, `oversight.pull_request_delivery`,
 `oversight.no_auto_merge`, `oversight.failure_stops_chain`,
-`oversight.session_contract`_
+`oversight.session_contract`, `oversight.implementation_agent`_
 
 - **Requirement:** All loop output is delivered as a pull request, and no
   automated process merges its own pull request.
 - **Requirement:** The workflow requests only `contents: write` and
   `pull-requests: write`, and never administrative or org-wide scopes.
 - **Requirement:** Continuation is gated on the loop's own `should_continue`
-  output, so a failed or stagnant run stops the chain.
+  output, so a failed or stagnant run stops the chain. A clean score keeps the
+  chain alive only to add a new evidence check.
+- **Requirement:** Each workflow iteration launches a fresh implementation
+  session from `state/next-session.md`, requires a repository change, and only
+  then runs the evaluator.
 - **Requirement:** `AGENTS.md` states the contract every fresh session follows,
   because a session starts with no memory of the previous one.
 - **Requirement:** A session must not weaken a check to make it pass. This is

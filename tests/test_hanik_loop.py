@@ -112,8 +112,9 @@ def test_brief_demands_a_harder_check_when_everything_passes(workdir):
     brief = result.brief_path.read_text(encoding="utf-8")
     assert "the bar is too low" in brief
     assert "add a check for it" in brief
-    # Nothing left to do means nothing is gained by running again.
-    assert result.should_continue is False
+    # A clean score starts a fresh implementation session that must raise the
+    # bar with a new failing check.
+    assert result.should_continue is True
 
 
 # ---------------------------------------------------------------------------

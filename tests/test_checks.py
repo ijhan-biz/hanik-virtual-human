@@ -372,6 +372,7 @@ def test_workflow_checks_fail_without_a_workflow(tmp_path):
         "oversight.pull_request_delivery",
         "oversight.no_auto_merge",
         "oversight.failure_stops_chain",
+        "oversight.implementation_agent",
     ):
         assert check_by_id(check_id).run(ctx).passed is False, check_id
 
@@ -404,6 +405,7 @@ def test_workflow_checks_pass_on_this_repository():
         "oversight.no_auto_merge",
         "oversight.failure_stops_chain",
         "oversight.session_contract",
+        "oversight.implementation_agent",
     ):
         outcome = check_by_id(check_id).run(ctx)
         assert outcome.passed is True, f"{check_id}: {outcome.evidence}"

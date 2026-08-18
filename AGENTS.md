@@ -19,8 +19,10 @@ One iteration is one session:
    writes `reports/iteration-NNNN.html` plus its JSON companion, updates
    `state/state.json`, and rewrites `state/next-session.md`.
 4. The change is delivered as a pull request for human review.
-5. If open tasks remain and the evidence actually changed, the workflow asks
-   for one more iteration — a new run, a new session.
+5. If the evidence actually changed, the workflow asks for one more iteration —
+   a new run, a new implementation session. If every check passes, the next
+   session must add a substantive check for a missing capability instead of
+   ending the chain.
 
 Scores are not opinions. Each criterion in `HANIK_SPEC.md` is backed by checks
 in `src/checks.py` that read files on disk; a criterion's score is the share of
@@ -37,7 +39,8 @@ its checks that pass. Nothing improves unless an artifact changes.
    benchmark scenario, or the test that the check is asking for. Write it as if
    a person will rely on it, because the check only measures that it exists and
    is substantive — it cannot measure whether it is any good. That part is on
-   you.
+   you. The automated implementation session must leave a repository change;
+   an unchanged checkout is a failed iteration, not progress.
 4. **Verify.** `python3 -m pip install -r requirements-dev.txt` then
    `python3 -m pytest tests/ -v`.
 5. **Run the loop last.** `python3 -m src.hanik_loop`. This regenerates the

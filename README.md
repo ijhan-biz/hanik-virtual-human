@@ -2,8 +2,10 @@
 
 An automated improvement loop for **Hanik**, a virtual human. Each iteration
 measures Hanik against explicit, file-backed evidence, writes a report, and
-hands the next session a concrete task. It runs entirely offline: no LLM
-provider, no network access, no credentials.
+hands the next session a concrete task. The evaluator runs entirely offline:
+no LLM provider, no network access, and no credentials. The workflow's
+separate implementation phase uses Copilot CLI on an ephemeral runner and
+passes its changes through tests and human review.
 
 The thing being improved is `hanik/` — the persona, its policies, and its
 benchmarks. Everything else exists to measure that artifact and to keep a
@@ -20,8 +22,9 @@ One run of the loop is one iteration, and one iteration is one fresh session:
 3. It runs `python3 -m src.hanik_loop`, which re-measures the repository from
    scratch and regenerates the report, the index, the state, and the brief.
 4. The change is delivered as a pull request for human review.
-5. If open tasks remain and the evidence actually changed, the workflow
-   dispatches one more iteration — a new run, a new session.
+5. If the evidence actually changed, the workflow dispatches one more
+   iteration — a new run, a new implementation session. If every check passes,
+   that session must add a substantive check for a missing capability.
 
 The full contract each session follows is in [`AGENTS.md`](AGENTS.md).
 
@@ -74,11 +77,13 @@ One invocation performs exactly one iteration. It writes:
 
 ## Continuous mode
 
-The workflow runs one iteration per invocation and then asks for the next one,
-so each iteration is an independent session on a clean runner. Continuation is
-earned, not automatic: the loop sets `should_continue` only when the run
-succeeded, open tasks remain, the evidence changed recently, and continuation
-was not disabled.
+The workflow runs one implementation/evaluation iteration per invocation and
+then asks for the next one, so each iteration is an independent session on a
+clean runner. Copilot CLI reads `state/next-session.md`, changes the repository,
+and is required to leave a non-empty diff before evaluation. Continuation is
+earned, not automatic: the loop sets `should_continue` when the run succeeds,
+the evidence changed recently (or a clean score needs a new check), and
+continuation was not disabled.
 
 Requirements for the chain to continue:
 
@@ -98,6 +103,11 @@ Requirements for the chain to continue:
 A failed run never chains. Neither does a stagnant one: if the evidence has not
 changed for `HANIK_STAGNATION_LIMIT` iterations, re-running cannot help, so the
 workflow stops and says why in the job summary.
+
+This is deliberately different from running the evaluator repeatedly. A fresh
+runner alone cannot improve Hanik; the implementation session is the part that
+turns the previous brief into a real artifact change. If Copilot makes no
+change, the workflow fails before it can create a false-progress report.
 
 ## The loop cannot finish
 

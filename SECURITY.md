@@ -16,12 +16,13 @@ maintainers and any automated agent operating on this repository.
   an absolute path, so a committed report cannot disclose the filesystem
   layout, user account, or directory structure of the machine that produced
   it.
-- **Offline by default.** `src/hanik_loop.py` makes no network calls and
-  calls no LLM provider. This removes prompt injection, data exfiltration,
-  and unpredictable third-party output as attack surfaces for the loop
-  itself. If a future iteration adds an LLM or external tool call, it must
-  first extend this document with its own threat model before being
-  enabled in the default workflow.
+- **Offline evaluator, bounded implementation agent.** `src/hanik_loop.py`
+  makes no network calls and the evaluator remains deterministic. The workflow
+  separately invokes Copilot CLI in an ephemeral runner to implement exactly
+  one task from `state/next-session.md`; its output is treated as untrusted,
+  limited to Git and Python inspection plus repository writes, tested, and
+  delivered for human review. If the agent makes no change, the run fails
+  before evaluation can report progress.
 - **Least privilege.** The workflow requests only the GitHub permissions it
   needs (`contents: write`, `pull-requests: write`) and nothing broader
   (no `admin`, no org-wide scopes).
@@ -35,10 +36,10 @@ maintainers and any automated agent operating on this repository.
   `render_html_report()` in `src/reporting.py` and the corresponding test
   `tests/test_hanik_loop.py::test_html_report_escapes_untrusted_state_content`,
   which is itself required by the `safety.escaping_regression_test` check.
-- If a future iteration integrates an LLM, all model output must be
-  treated as untrusted: it must never be interpolated into shell commands,
-  file paths, or executed directly, and must be escaped the same way state
-  content is escaped today.
+- Copilot CLI output is untrusted: it must never be interpolated into shell
+  commands, file paths, or executed directly. The workflow gives the agent a
+  fixed brief, restricts its shell allowances, runs tests after it exits, and
+  refuses to continue when it leaves no repository change.
 - The loop never parses or executes remediation text; it is inert,
   human-readable string data that is rendered and never run. This is enforced
   by AST scans over `src/` (`safety.no_dynamic_execution`,
@@ -50,6 +51,11 @@ maintainers and any automated agent operating on this repository.
 
 - No API keys, tokens, or credentials are hard-coded anywhere in this
   repository.
+- Copilot CLI authenticates through the Actions-provided `GITHUB_TOKEN` via
+  `COPILOT_GITHUB_TOKEN`. The organization must enable Copilot requests for
+  Actions; if that policy is unavailable, the workflow must use a separately
+  scoped secret with only the Copilot Requests permission rather than reusing
+  `HANIK_DISPATCH_TOKEN`.
 - The only credential used by the automated dispatch path is
   `HANIK_DISPATCH_TOKEN`, a **separate, minimally-scoped** GitHub token
   (fine-grained personal access token or a dedicated GitHub App
@@ -103,14 +109,16 @@ these rules:
 
 ## Cost and rate controls
 
-- The loop is entirely local (pure Python, standard library only) and
-  performs no network calls, so it has no external API cost.
+- The evaluator is entirely local (pure Python, standard library only) and
+  performs no network calls. Copilot CLI is the only external model call, and
+  it runs at most once per workflow iteration.
 - The workflow (`.github/workflows/hanik-loop.yml`) sets a job-level
   `timeout-minutes` so a hung or misbehaving run cannot consume runner
   minutes indefinitely.
-- Each workflow run performs exactly **one** iteration, so no single run can
-  accumulate unbounded work. Continuation requires a fresh dispatch that the
-  loop only requests when it reports progress and remaining tasks.
+- Each workflow run performs exactly **one** implementation/evaluation
+  iteration, so no single run can accumulate unbounded work. Continuation
+  requires a fresh dispatch that the loop only requests when it reports recent
+  evidence change or a clean score that requires a new check.
 - Stagnation detection (`HANIK_STAGNATION_LIMIT`, default `2`) stops the chain
   when the evidence has not changed, so a loop with nothing left to do cannot
   keep consuming runner minutes.

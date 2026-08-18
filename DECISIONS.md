@@ -5,30 +5,26 @@ the reasoning behind them, and the alternatives that were considered and
 rejected. It complements `HANIK_SPEC.md` (what Hanik must do) and
 `SECURITY.md` (how it is kept safe).
 
-## 1. Offline, rule-based evaluation instead of an LLM call
+## 1. Offline, rule-based evaluation separate from the implementation agent
 
-**Decision:** `src/hanik_loop.py` evaluates the previous iteration and
-generates recommendations using a deterministic, rule-based algorithm. It
-does not call any LLM or external API.
+**Decision:** `src/hanik_loop.py` evaluates the repository and generates the
+session brief using a deterministic, rule-based algorithm. It does not call
+any LLM or external API. The workflow may run Copilot CLI in a separate,
+bounded implementation phase before this evaluator.
 
-**Why:** The original request asked for a loop that repeats "continuously"
-after each iteration completes. An LLM-backed loop with no bound would
-introduce unpredictable cost, unpredictable output, and a much larger
-security surface (prompt injection, data exfiltration, provider lock-in)
-for an unattended, potentially long-running process. A deterministic,
-offline evaluator can be fully unit-tested, has no per-run cost, requires
-no provider credentials, and is trivially reviewable by a human.
+**Why:** The original request asked for a loop that repeats "continuously" after each
+iteration completes. An evaluator-only loop cannot improve Hanik, while an
+unbounded model-backed loop would introduce unpredictable cost, output, and
+security surface. Keeping evaluation deterministic makes scores fully
+unit-testable and reviewable. The separate implementation agent is bounded to
+one task, must produce a repository change, and cannot make a change effective
+without tests and human pull-request review.
 
-**Alternative considered:** Wire the loop directly to an LLM provider
-(e.g. via an API key secret) to produce genuinely novel critiques each
-iteration. Rejected for the first iteration because it would require
-provider credentials (violating "do not hard-code secrets or external
-provider credentials" and needing careful secret management), would make
-tests non-deterministic or require mocking, and would significantly
-expand the security review needed before running unattended. This remains
-a documented **hypothesis** for a future iteration once the corresponding
-`SECURITY.md` controls (rate limits, cost caps, injection defenses) are
-designed and reviewed.
+**Alternative considered:** Put model calls inside `src/hanik_loop.py` and let
+model output determine scores. Rejected because it would make evidence
+non-deterministic and couple the evaluator to an external provider. Copilot is
+used only by the workflow's implementation phase, whose output is then checked
+by the unchanged deterministic evaluator.
 
 ## 2. One iteration per run, one session per iteration
 
@@ -277,3 +273,35 @@ translated.
 review to notice empty content. Rejected because the automated loop would
 already have reported a passing score and could have stopped before a reviewer
 looked at the artifact.
+
+## 13. An iteration must implement before it evaluates
+
+**Decision:** Each workflow run now has two explicit phases: a Copilot CLI
+implementation session reads `state/next-session.md` and makes exactly one
+repository change, then the deterministic Python evaluator measures that
+change. The run fails if the implementation session leaves a clean checkout.
+When all checks pass, the implementation session adds a new substantive check
+instead of treating the score as completion.
+
+**Why:** The previous automation created a fresh runner but only ran
+`python3 -m src.hanik_loop`. A new process is not a new implementation session:
+it has no mechanism to edit `hanik/`, so it repeated the same failing evidence
+until stagnation stopped it. Increasing the stagnation limit would only make
+the repetition longer. The missing link was an actor that could read the brief
+and build the requested artifact.
+
+The implementation and evaluator remain separate on purpose. The agent is
+allowed to propose a change, but it cannot declare that change successful:
+tests and evidence checks run afterwards, generated output goes through the
+existing pull-request review path, and no automated process takes effect on
+the default branch.
+
+**Alternative considered:** Keep dispatching evaluator-only runs and count
+changed timestamps, report wording, or agent log output as progress. Rejected:
+those signals do not improve Hanik and would recreate the fabricated-scoring
+failure this project was created to remove.
+
+**Security boundary:** Copilot CLI runs once per ephemeral workflow runner with
+`COPILOT_GITHUB_TOKEN`, Git/Python inspection, repository writes, and
+`--no-ask-user`. It receives the repository brief as task context, must not
+add network or dynamic execution, and a no-op is a hard failure.
