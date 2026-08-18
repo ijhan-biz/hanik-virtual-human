@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "iteration": 1,
+  "updated_at": "2026-08-18T16:07:36+00:00",
+  "document": {
+    "digest": "e2324b81804d080fd67df8309d4cca5d502bfbfcb27ab8e51ef7f78a77f0df86",
+    "preamble_digest": "db551382e5b08f96a170540600dd688d7d8951111dcd90f64cbf99a5adf12cac"
+  },
+  "conditions": {
+    "C-001": {
+      "digest": "2d4cd28eeea8e4293ce359048e6ecec2d4713f5ad0605a96b24df4163ee476c1",
+      "substance_digest": "72e8c2ec32b6c9efcfebdb441307e0c67cffd4f480d32c5b4c9a8a2e7bebde18"
+    },
+    "C-002": {
+      "digest": "adb41395ab3fb47073a6426e69cc7fc233a7901bef8937173e323c46b4dba20c",
+      "substance_digest": "85d994f10b4e80065f0beda89cb9688d869660867c2feb7433a1018049695746"
+    },
+    "C-003": {
+      "digest": "35f8538aa4acc718b30e37b23cb3ff3ec07bd2e9caf791d85b67a0e1ad7a064b",
+      "substance_digest": "4e5e4f09613718dee27dbd049a85452dbeab76ef35bf3f3538b2e6c67afc9961"
+    }
+  },
+  "objections": {
+    "O-0001": {
+      "status": "open",
+      "digest": "8bd28f55b71d4bdfb3118f9d933ceb795f0282703afeaf738f498e6a64fedea3",
+      "target": "C-001"
+    },
+    "O-0002": {
+      "status": "open",
+      "digest": "f4ac3f03f22ef4ec48c64e70396c5e2fbd6e40b259d56889f7dc055189f12fc0",
+      "target": "C-002"
+    },
+    "O-0003": {
+      "status": "open",
+      "digest": "fed819bd2548a58086d2290350340e93c3cf392d2422e13a2dac8faaf160c9ce",
+      "target": "문서"
+    }
+  },
+  "signature": "73163c9dd3305a4d774aae10b83024db9e8ec5198f952a98039d1380fa473218",
+  "history": [
+    {
+      "iteration": 1,
+      "at": "2026-08-18T16:07:36+00:00",
+      "signature": "73163c9dd3305a4d774aae10b83024db9e8ec5198f952a98039d1380fa473218",
+      "ok": true,
+      "conditions": 3,
+      "open": 3,
+      "resolved_now": 0,
+      "raised_now": 3,
+      "violations": []
+    }
+  ]
+}

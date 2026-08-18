@@ -1,325 +1,209 @@
-# Decisions
+# 결정
 
-This document records key design decisions for the Hanik improvement loop,
-the reasoning behind them, and the alternatives that were considered and
-rejected. It complements `HANIK_SPEC.md` (what Hanik must do) and
-`SECURITY.md` (how it is kept safe).
+왜 이렇게 만들었는지, 그리고 무엇을 검토한 뒤 버렸는지. 결정을 바꾸려면 여기에
+항목을 더하라. 지우지는 마라.
 
-## 1. Offline, rule-based evaluation separate from the implementation agent
+## 0. 전신의 실패
 
-**Decision:** `src/hanik_loop.py` evaluates the repository and generates the
-session brief using a deterministic, rule-based algorithm. It does not call
-any LLM or external API. The workflow may run Copilot CLI in a separate,
-bounded implementation phase before this evaluator.
+이 저장소는 같은 이름으로 한 번 실패했다. 그 기록이 이후의 모든 결정을 설명한다.
 
-**Why:** The original request asked for a loop that repeats "continuously" after each
-iteration completes. An evaluator-only loop cannot improve Hanik, while an
-unbounded model-backed loop would introduce unpredictable cost, output, and
-security surface. Keeping evaluation deterministic makes scores fully
-unit-testable and reviewable. The separate implementation agent is bounded to
-one task, must produce a repository change, and cannot make a change effective
-without tests and human pull-request review.
-
-**Alternative considered:** Put model calls inside `src/hanik_loop.py` and let
-model output determine scores. Rejected because it would make evidence
-non-deterministic and couple the evaluator to an external provider. Copilot is
-used only by the workflow's implementation phase, whose output is then checked
-by the unchanged deterministic evaluator.
-
-## 2. One iteration per run, one session per iteration
-
-**Decision:** Each GitHub Actions run performs exactly one iteration and then
-exits. A successful run requests the next iteration through
-`repository_dispatch` only when the loop itself reports `should_continue`. The
-persisted iteration number is cumulative across runs.
-
-**Why:** Each iteration is meant to be a fresh session with no memory of the
-previous one — that is the whole point of writing `state/next-session.md` to
-disk. Batching many iterations into one run defeats this: the later iterations
-inherit the earlier ones' context, and a single run becomes long, hard to
-cancel, and hard to review. One iteration per run keeps every execution short,
-inspectable, and cancelable, gives each iteration a clean runner, and makes
-"stop the loop" as simple as not dispatching the next one.
-
-**Alternative considered:** A long-lived runner process (e.g. a self-hosted
-daemon or a workflow with a `while true` loop inside one job) that keeps
-iterating without exiting. Rejected because GitHub Actions job timeouts,
-billing models, and operational risk make an indefinitely running job an
-anti-pattern; it also makes "stop the loop" much harder than "don't trigger the
-next dispatch."
-
-**Superseded:** An earlier version ran 50 iterations per batch
-(`HANIK_BATCH_SIZE`). That variable no longer exists.
-
-## 3. Separate `HANIK_DISPATCH_TOKEN` instead of the default `GITHUB_TOKEN`
-
-**Decision:** The completion-triggered `repository_dispatch` call uses a
-dedicated `HANIK_DISPATCH_TOKEN` secret, not the workflow's own
-`GITHUB_TOKEN`.
-
-**Why:** GitHub Actions deliberately does not let events created with the
-default `GITHUB_TOKEN` trigger further workflow runs, as an anti-recursion
-safeguard. Using a separate token is the officially supported way to
-intentionally chain workflow runs. Keeping it separate from `GITHUB_TOKEN`
-also means it can be independently scoped (ideally to just
-`repository_dispatch` on this one repository) and independently revoked
-as an emergency stop, without affecting the rest of the workflow's ability
-to check out code, run tests, and open pull requests.
-
-**Alternative considered:** Grant `GITHUB_TOKEN` elevated permissions and
-attempt to force recursive triggering. Rejected: this fights an
-intentional platform safeguard, would likely require unsafe workarounds,
-and would remove the clean "revoke one secret to stop everything"
-emergency shutdown story described in `SECURITY.md`.
-
-## 4. Atomic state writes via temp-file + `os.replace`
-
-**Decision:** `save_state_atomic()` writes to a temporary file in the same
-directory as `state/state.json` and then calls `os.replace()`, rather than
-writing directly to the target path.
-
-**Why:** `os.replace()` is atomic on both POSIX and Windows: a reader can
-never observe a partially-written file. This protects against corruption
-if the process is killed mid-write (e.g. workflow timeout, cancellation)
-and is a well-established pattern for crash-safe file updates.
-
-**Alternative considered:** Write directly to `state/state.json` with a
-single `open(...).write(...)`. Rejected because a crash between opening
-the file (which truncates it) and finishing the write would leave
-`state/state.json` corrupted, which the loop would then have to recover
-from anyway -- better to avoid the corruption in the first place.
-
-## 5. No score cap, because a perfect score is a bar problem
-
-**Decision:** Scores are not capped. A criterion whose checks all pass scores
-`1.0`, and the report and session brief respond by demanding a new check rather
-than declaring the criterion finished.
-
-**Why:** An artificial ceiling (the earlier `MAX_SCORE = 0.95`) was an attempt
-to signal "never done" through arithmetic. It does not work: a permanent 0.05
-gap that no possible action can close is indistinguishable from noise, and it
-makes the score stop meaning "share of evidence satisfied." Under evidence-based
-scoring, `1.0` is a real and legible statement — every check currently written
-passes. The correct response is to raise the bar, and the loop says so
-explicitly in that state, which is a demand for work rather than a number that
-can never be reached.
-
-**Alternative considered:** Keep the cap and treat the residual as a reminder.
-Rejected because a reminder nobody can act on is noise, and because a capped
-score cannot be interpreted as a coverage ratio.
-
-## 6. Corrupted or malformed state resets to a fresh empty state
-
-**Decision:** `load_state()` catches JSON decode errors and structural
-validation failures (wrong types, missing keys) and returns a fresh empty
-state (`{"iteration": 0, "history": []}`) instead of raising.
-
-**Why:** The loop must always be able to make forward progress even if
-`state/state.json` was hand-edited incorrectly, corrupted by a prior
-crashed run (mitigated by atomic writes, but defense in depth still
-matters), or manipulated. Silently resetting to iteration 0 is safer than
-crashing the workflow, and the reset is visible in the resulting report
-(iteration counter restarts) so it is not hidden from human reviewers.
-
-**Alternative considered:** Fail loudly and stop the workflow on any state
-corruption. Rejected as the first line of defense because it would turn a
-recoverable data issue into a hard outage requiring manual intervention;
-however, reviewers should still notice an unexpected iteration-counter
-reset in the generated report and investigate why the state file was
-corrupted.
-
-## 7. Evidence-based scoring replaced self-congratulating scoring
-
-**Decision:** A criterion's score is the share of its checks that pass, where
-each check in `src/checks.py` reads a file, parses an AST, or scans generated
-output. Nothing is carried forward between iterations except the iteration
-counter and history.
-
-**Why:** The original design scored a criterion higher because the *previous
-iteration had recommended improving it*:
+이전 설계는 여덟 개 기준에 점수를 매겼고, 점수는 이렇게 올랐다.
 
 ```python
 if criterion in previous_recommended:
     base += IMPROVEMENT_STEP
 ```
 
-A recommendation was emitted for any criterion below target, so every criterion
-climbed 0.40 → 0.90 in five iterations regardless of whether anything changed,
-and then froze. By iteration 50 the loop had "achieved" its target on all eight
-criteria; it then produced 200 more iterations of an identical report. Nothing
-about Hanik was ever built, because there was no Hanik — the loop only ever
-evaluated itself.
+권고는 목표에 못 미치는 모든 기준에 나갔다. 그래서 모든 기준이 다섯 번의 반복 만에
+0.40에서 0.90으로 올랐고, 거기서 멈췄다. 50번째 반복에서 여덟 기준 모두 목표에
+도달했다고 선언했으며, 루프는 그 뒤로 200번 더 같은 보고서를 찍어냈다. Hanik은 한 번도
+만들어지지 않았다. 만들어질 수가 없었다. 루프가 평가하고 있던 것은 루프 자신뿐이었다.
 
-That is the failure mode this repository now exists to avoid, and it is worth
-stating plainly: a metric that improves because you intended to improve it is
-not a metric. `reports/iteration-0001.html` through `-0250.html` are kept as the
-evidence of what that looks like.
+**개선하려는 의도 때문에 오르는 지표는 지표가 아니다.** 아래 결정들은 대부분 이 문장의
+따름정리다.
 
-**Alternative considered:** Keep the incremental model but require a commit
-touching relevant files before granting the increment. Rejected as a weaker
-version of the same idea: it measures activity rather than result, and a commit
-touching a file proves nothing about what the file now says.
+## 1. 결과물은 `Hanik.md` 하나다
 
-## 8. Failing checks are the backlog
+**결정:** 산출물은 단일 문서다. 조건들이 여러 파일로 흩어지지 않는다.
 
-**Decision:** There is no task list. Every check carries a `remediation` string
-and a `targets` tuple, and the set of failing checks *is* the work queue. The
-session brief is generated by sorting failing checks by criterion weight.
+**왜:** 전신은 페르소나, 정책, 벤치마크를 여러 디렉터리로 나눴고, 검사는 각 파일에
+특정 제목이 있는지를 봤다. 파일을 늘리면 통과하는 검사도 늘었다. 산출물이 하나이면
+"파일을 추가해서 점수를 올린다"는 경로 자체가 없다.
 
-**Why:** A hand-maintained backlog drifts away from the evaluation, and then
-either the loop works on tasks that no longer matter or it reports success on
-criteria nobody is working on. Deriving tasks from failures makes drift
-impossible: a task exists exactly as long as the evidence for it is missing, and
-disappears the moment the evidence appears. It also means completion is defined
-by the artifact rather than by an agent's assertion that it finished.
+**대가:** 문서가 길어진다. 조건이 수십 개가 되면 다시 나눠야 할 수 있고, 그때는 이
+결정을 개정하면 된다.
 
-**Consequence:** The initial three checks — a second-language persona, a
-red-team suite, and benchmark scenarios — were intentionally left as a real
-starting backlog. Once those artifacts were implemented, the next iteration
-raised the bar with a new Korean safety-policy check rather than declaring
-Hanik finished.
+## 2. 비판은 세션이, 강제는 루프가
 
-**Risk:** The obvious way to make a check pass is to weaken the check. The loop
-cannot detect this about itself, since a weakened check reports a true pass. The
-only mitigations are stating the rule in `AGENTS.md`, repeating it in every
-generated brief, and human pull-request review — which is a large part of why
-nothing merges itself.
+**결정:** 문서가 좋은지는 세션(LLM)과 사람이 판단한다. 파이썬 루프는 판단하지 않고
+정직성만 강제한다.
 
-## 9. Stagnation detection, not an iteration budget, controls the loop
+**왜:** 논증이 순환하는지, 전제가 검토되지 않았는지는 문자열 검사로 알 수 없다.
+전신의 잘못은 점수가 오른 것이 아니라, **기계가 판단할 수 없는 것을 판단하는 척한
+것**이다. 척하지 않으면 그 실패는 일어나지 않는다.
 
-**Decision:** Each iteration records an evidence signature — the pass/fail
-outcome of every check, sorted by check ID. If the signature matches the
-previous iteration, the run counts as no progress, and after
-`HANIK_STAGNATION_LIMIT` consecutive no-progress iterations (default 2) the
-chain stops. `HANIK_MAX_ITERATIONS` remains as a safety ceiling but is set to
-10 000 rather than 50.
+**버린 대안:** 규칙 기반으로 문서의 질을 채점한다. 전신이 한 일이다. 어떤 규칙을 짜도
+그 규칙에 맞춘 글쓰기가 가능하고, 그러면 다시 지표가 지표를 측정하게 된다.
 
-**Why:** The old `DEFAULT_MAX_ITERATIONS = 50` conflated two unrelated things:
-"stop when this is no longer productive" and "never exceed this count." It also
-had a latent bug — with the counter already at 250, the loop would have refused
-to run at all. Stagnation is the correct control because it measures the thing
-that actually matters: if the evidence did not move, running again cannot help,
-and the loop should say so instead of producing another identical report. The
-ceiling is retained purely as a backstop against a pathological oscillation
-between two states.
+## 3. 점수를 없앴다
 
-**Design detail:** The signature deliberately ignores evidence wording and check
-ordering, tracking only outcomes. Otherwise a reworded remediation string would
-register as progress. There is a test for exactly this.
+**결정:** 보고서에 점수가 없다. 조건 수, 문서 분량, 미해결 반론 수 같은 계수만 있다.
 
-## 10. The artifact lives in `hanik/`, separate from the loop
+**왜:** 점수는 그 자체로 압력이다. 숫자가 있으면 올리고 싶어지고, 올리는 가장 싼 방법은
+언제나 측정을 만족시키는 것이지 대상을 개선하는 것이 아니다. 진척은 "무엇이 바뀌었는가"로
+읽으면 충분하다. 보고서는 그것을 문장으로 적는다.
 
-**Decision:** Hanik itself — persona, policies, benchmarks — is a directory of
-Markdown, versioned alongside but strictly separate from `src/`.
+**버린 대안:** 통과한 규칙의 비율을 점수로 낸다. 규칙은 전부 통과가 정상이므로 그
+비율은 언제나 1.00이거나 고장 신호다. 정보가 없다.
 
-**Why:** The loop and the thing being improved must be distinguishable, or the
-loop starts measuring itself. A file layout enforces that better than a
-convention: `src/checks.py` reads `hanik/` and the reports it generates, and
-"improving Hanik" means editing files under `hanik/`. Markdown was chosen over a
-structured format because the persona is read by humans during review and by
-agents as context, and both are better served by prose with headings than by a
-schema. The checks parse headings, bullet counts, and exact sentences, which is
-enough structure to be verifiable without making the artifact unreadable.
+## 4. 반론이 백로그다
 
-**Alternative considered:** Model the persona as YAML or JSON with a schema.
-Rejected because it optimizes for the checker at the expense of every human and
-agent that has to read it, and because schema conformance is a weaker signal
-than the presence of four worked example exchanges.
+**결정:** 별도의 할 일 목록이 없다. `objections/`의 미해결 반론이 곧 할 일이며,
+브리프는 그것을 오래된 순으로 정렬해서 보여준다.
 
-## 11. Raise the bar with translated safety policy
+**왜:** 손으로 관리하는 백로그는 평가와 어긋나기 시작하고, 그러면 아무도 관심 없는
+항목을 작업하거나 아무도 작업하지 않는 항목에 성공을 보고하게 된다. 반론에서 할 일을
+끌어내면 어긋날 수가 없다. 할 일은 반론이 열려 있는 동안 정확히 그동안만 존재한다.
 
-**Decision:** After implementing the initial backlog, add
-`safety.multilingual_policy` for `hanik/policies/safety.ko.md`. It requires
-Korean refusal rules, at least five harm categories, and a human-escalation
-section. The artifact is intentionally the next open task, so the automatic
-chain has useful work instead of stopping at an artificial 1.0.
+**부수 효과:** 완료의 정의가 "세션이 끝났다고 말했다"가 아니라 "반론이 요구한 것이
+문서에 있다"가 된다.
 
-**Why:** `hanik/persona.ko.md` makes Korean identity and examples concrete, but
-an English-only safety policy still leaves a language-specific gap in the
-capability Hanik promises. A translated policy is a substantive safety
-improvement, not a string-match exercise: it must preserve refusal and
-escalation behaviour for users who never read the English policy. The check
-also demonstrates the required empty-backlog behaviour — completion raises
-the bar with a new, actionable task.
+## 5. 반론은 제기된 뒤 고칠 수 없다 (R6)
 
-**Alternative considered:** Treat the Korean persona as sufficient and let the
-loop stop with all existing checks passing. Rejected because a perfect score
-would then reward language coverage without equivalent safety coverage, and the
-repository's contract explicitly says an empty backlog must produce a harder
-check.
+**결정:** 반론의 제목·대상·본문·해소 조건은 한 번 커밋되면 수정할 수 없다. 해시로
+강제한다. 상태와 해소 항목만 바꿀 수 있다.
 
-## 12. Checks must test meaning, not only document shape
+**왜:** 이 루프가 무너지는 가장 짧은 길은 반론을 무르게 고쳐서 해소하는 것이다.
+전신은 같은 위험을 "검사를 약화시키지 말라"는 규범으로만 막으려 했고, 그것은 탐지할
+수 없는 규범이었다. R6은 그 자리에 탐지 가능한 장치를 놓는다. 이 저장소가 전신에
+대해 갖는 가장 실질적인 개선이다.
 
-**Decision:** Strengthen `safety.multilingual_policy` so it checks the content
-of the Korean refusal, harm, and handoff sections: role-play must not bypass a
-refusal, self-harm must be named, and emergency/crisis escalation must be
-present. Add a regression test proving headings and five arbitrary bullets do
-not pass.
+**대상까지 묶는 이유:** 대상이 해시 밖에 있으면 본문을 한 글자도 건드리지 않고 대상만
+다른 조건으로 옮길 수 있다. 그러면 이미 고쳐놓은 조건에 반론을 갖다 붙여 R5를
+통과시킬 수 있고, R6은 "본문 그대로"라며 통과를 보고한다. 초기 구현에 실제로 있던
+구멍이며, 대상을 해시에 넣어 막았다.
 
-**Why:** A critical review of the previous session found that its new check
-would pass a policy made only of headings plus five meaningless bullets. That
-would increase the score without delivering a safety capability — the exact
-failure mode this repository was redesigned to prevent. Structural checks are
-useful as a first gate, but safety checks must also verify the concrete concepts
-the policy claims to cover.
+**대가:** 오탈자도 못 고친다. 잘못 쓴 반론은 영영 남는다. 감수한다. R4는 반복마다
+하나의 해소만 요구하므로 나쁜 반론 하나가 루프를 막지 못하고, 그저 재고에 남는다.
 
-The same review found that Korean identity and safety coverage still had a
-privacy-language gap. `privacy.multilingual_policy` therefore becomes the next
-task after the Korean safety policy, requiring Korean collection, retention, and
-deletion guidance rather than silently treating English documentation as
-translated.
+**버린 대안:** `withdrawn` 상태를 둬서 반론을 아무 때나 철회할 수 있게 한다. 철회는 곧
+약화의 다른 이름이 된다. 대신 §14의 제한된 은퇴 경로를 둔다.
 
-**Alternative considered:** Accept the heading/count check and rely on human
-review to notice empty content. Rejected because the automated loop would
-already have reported a passing score and could have stopped before a reviewer
-looked at the artifact.
+## 6. 실질 해시는 '개정' 필드를 제외한다 (R5)
 
-## 13. An iteration must implement before it evaluates
+**결정:** 조건의 변경 여부는 주장·근거·한계만으로 계산한 해시로 판정한다. 개정 이력은
+빼고 센다.
 
-**Decision:** Each workflow run now has two explicit phases: a Copilot CLI
-implementation session reads `state/next-session.md` and makes exactly one
-repository change, then the deterministic Python evaluator measures that
-change. The run fails if the implementation session leaves a clean checkout.
-When all checks pass, the implementation session adds a new substantive check
-instead of treating the score as completion.
+**왜:** 이것이 없으면 개정 줄에 "O-0007에 답하며 재작성"이라고 적는 것만으로 R3과 R5를
+통과할 수 있다. 즉 **해소했다는 선언만으로 루프가 돌아간다.** 전신의 실패 구조와 정확히
+같은 모양이므로, 처음부터 막아둔다.
 
-**Why:** The previous automation created a fresh runner but only ran
-`python3 -m src.hanik_loop`. A new process is not a new implementation session:
-it has no mechanism to edit `hanik/`, so it repeated the same failing evidence
-until stagnation stopped it. Increasing the stagnation limit would only make
-the repetition longer. The missing link was an actor that could read the brief
-and build the requested artifact.
+## 7. 위반한 반복은 스냅샷을 갱신하지 않는다
 
-The implementation and evaluator remain separate on purpose. The agent is
-allowed to propose a change, but it cannot declare that change successful:
-tests and evidence checks run afterwards, generated output goes through the
-existing pull-request review path, and no automated process takes effect on
-the default branch.
+**결정:** 규칙을 어긴 반복도 보고서를 쓰고 반복 번호를 올리지만, 문서와 반론의 스냅샷은
+갱신하지 않는다.
 
-**Alternative considered:** Keep dispatching evaluator-only runs and count
-changed timestamps, report wording, or agent log output as progress. Rejected:
-those signals do not improve Hanik and would recreate the fabricated-scoring
-failure this project was created to remove.
+**왜:** 갱신하면 어긴 상태가 다음 반복의 기준이 되고, 위반이 세탁된다. 예를 들어 R6을
+어겨 반론을 고쳐 쓴 반복의 해시를 그대로 저장하면, 다음 반복은 그 수정을 알아채지 못한다.
+기준을 그대로 두면 위반은 고쳐질 때까지 매 반복 보고된다.
 
-**Security boundary:** Copilot CLI runs once per ephemeral workflow runner with
-`HANIK_COPILOT_TOKEN` through `COPILOT_GITHUB_TOKEN`, Git/Python inspection, repository writes, and
-`--no-ask-user`. It receives the repository brief as task context, must not
-add network or dynamic execution, and a no-op is a hard failure.
+**따름:** '첫 반복'은 반복 번호가 아니라 승인된 스냅샷의 유무로 판정해야 한다.
+그러지 않으면 첫 반복이 실패한 뒤 다음 반복이 비교 대상 없이 R4에 걸려 영영 막힌다.
 
-## 14. Bound a long campaign with a UTC deadline
+## 8. 미해결 반론이 0이면 실패다 (R8)
 
-**Decision:** A 24-hour campaign uses the repository variable
-`HANIK_RUN_UNTIL` rather than a schedule trigger, a daemon, or a loop inside
-one workflow job. Every evaluation checks the ISO-8601 UTC deadline before it
-requests another fresh implementation session.
+**결정:** 반론 재고가 비면 루프는 실패하고, 브리프는 새 반론을 요구한다.
 
-**Why:** GitHub Actions jobs are short-lived and a single long-running job is
-hard to inspect or stop. Dispatching one bounded iteration at a time preserves
-fresh sessions, pull-request review, and the kill switch. The deadline gives
-the human who starts a campaign a precise end time while keeping stagnation and
-the iteration ceiling as independent safety stops.
+**왜:** 모든 반론이 해소된 상태는 문서가 완성되었다는 뜻이 아니라 비판이 멈췄다는
+뜻이다. 전신은 모든 검사가 통과한 뒤 200번의 반복을 더 돌면서 그것을 성공으로 보고했다.
+같은 상태를 이번에는 실패로 정의한다.
 
-**Alternative considered:** Add a cron schedule or use `while true` for 24
-hours. Rejected because a schedule can start work after the intended campaign,
-and an in-process loop hides individual sessions and makes cancellation less
-legible.
+**따름:** 루프는 원리적으로 끝나지 않는다. 그것이 요구사항이다.
+
+## 9. 반론 제기 의무에는 상한이 있다 (R7)
+
+**결정:** 미해결 반론이 `HANIK_OPEN_LIMIT`(기본 12) 이상이면 새 반론 제기 의무를
+면제하고 브리프가 '해소 우선'을 표시한다.
+
+**왜:** 매 반복 하나씩 제기하고 하나씩 해소하면 재고는 유지되지만, 어려운 반론이
+쌓이면 실제로는 계속 늘어난다. 관리 불가능한 더미는 브리프를 쓸모없게 만든다. 상한은
+루프를 유한하게 만들지 않는다 — R8이 여전히 0을 금지한다.
+
+## 10. 보고서는 Markdown이다
+
+**결정:** HTML 대신 Markdown으로 쓴다.
+
+**왜:** 로컬 전용이므로 브라우저 렌더링이 필요 없다. 그리고 HTML을 쓰지 않으면
+이스케이프 취약점이라는 문제 범주가 통째로 사라진다. 전신은 그것을 막기 위해 별도의
+검사와 회귀 테스트를 유지해야 했다. 없앨 수 있는 위험은 방어하지 말고 없앤다.
+덤으로 보고서가 diff로 읽힌다.
+
+## 11. 이력과 원장을 나눈다
+
+**결정:** `state/state.json`은 최근 이력만 상한까지 갖고, 전체 기록은
+`state/ledger.json`에 따로 쌓는다. 인덱스는 원장으로 만든다.
+
+**왜:** 매 반복 읽고 쓰는 파일이 무한히 커지면 안 되고, 그렇다고 기록을 잃어서도 안
+된다. 두 요구를 한 파일에서 만족시키려면 가지치기와 보관을 겹쳐 구현해야 하는데,
+파일을 나누면 각각이 한 가지 일만 한다.
+
+**버린 대안:** 잘려나간 이력을 `state/archive/`에 조각 파일로 보관한다. 전신의 방식이다.
+원장 하나로 같은 목적을 달성할 수 있어 중복이다.
+
+## 12. 로컬 수동 실행만 구현한다
+
+**결정:** GitHub Actions 자동 연쇄는 만들지 않는다. `python3 -m src.hanik_loop`을
+사람이 돌린다.
+
+**왜:** 전신은 자동 연쇄가 있었고, 그 덕분에 아무도 읽지 않는 보고서를 200번 더
+생산했다. 루프를 돌리는 데 사람의 손이 한 번 필요하다는 것은 비용이 아니라 안전장치다.
+자동화가 필요해지면 그때 추가하되, 그 전에 한 반복이 실제로 무엇을 만드는지가 먼저
+증명되어야 한다.
+
+**따름:** 킬 스위치, 디스패치 토큰, 정체 감지 카운터가 필요 없다. 정체는 R3과 R11이
+같은 반복 안에서 즉시 실패로 보고한다.
+
+## 13. 산출물은 한국어로 쓴다
+
+**결정:** `Hanik.md`, 반론, 보고서, 그리고 설계 문서 전부를 한국어로 쓴다.
+
+**왜:** 이 문서를 읽고 쓰는 사람이 한국어로 사고한다. 인간의 조건을 다루는 글에서
+번역은 손실이 크고, 두 언어를 유지하면 한쪽이 반드시 낡는다. 전신은 영어 문서와 한국어
+문서를 따로 두었고, 그 격차가 그대로 백로그가 되었다.
+
+## 14. 반론은 지울 수 없고, 은퇴만 할 수 있다 (R12)
+
+**결정:** 반론 파일을 삭제하거나 번호를 바꿀 수 없고, 닫힌 반론을 다시 열 수 없다.
+겨냥할 구조가 사라졌을 때만 `superseded`로 은퇴시키며, 이때 비판을 넘겨받을 반론을
+반드시 지목해야 한다. 은퇴는 R4의 해소로 세지 않는다.
+
+**왜:** R6이 반론의 수정을 막아도, 삭제를 막지 않으면 아무 의미가 없다. 삭제는
+약화보다 더 강한 형태의 약화다. 같은 이유로 개명도 막아야 한다. 개명은 삭제와 신규
+생성의 합이고, 그 합은 "복제본을 새 반론이라고 제출해서 R7을 채우기"가 된다. 닫힌
+반론을 되돌리는 것도 막는다. 되돌릴 수 있으면 같은 반론 하나로 매 반복 R4를 채울 수
+있다.
+
+**은퇴 경로가 필요한 이유:** 삭제만 막고 끝내면 심각한 함정이 생긴다. 한 번이라도
+반론이 겨냥한 조건은 영영 합치거나 없앨 수 없게 된다 — 조건을 지우면 R9가 대상 부재로
+막고, 반론을 해소하려 해도 R5가 대상 부재로 막고, 대상을 옮기는 것은 R6이 막는다.
+그런데 이 저장소의 시드 반론 `O-0003`은 조건을 항목으로 나누는 것 자체가 잘못일 수
+있다고 주장한다. 그 주장이 옳다는 결론에 이르러도 구조를 바꿀 수 없다면, 루프는 자기
+비판을 실행할 수 없는 상태로 굳는다.
+
+그래서 R9의 대상 존재 요구를 **열린 반론에만** 적용하고, 은퇴라는 좁은 출구를 뒀다.
+출구를 좁게 만드는 장치가 두 개다. 넘겨받을 반론을 지목해야 하므로 비판은 사라지지
+않고 옮겨가며, 은퇴가 해소로 세지 않으므로 은퇴로 반복의 의무를 때울 수 없다.
+
+**남는 구멍:** 넘겨받은 반론이 원래 비판을 실제로 계승하는지는 기계가 모른다.
+`SECURITY.md`에 적어두었고, 사람 리뷰가 봐야 할 항목이다.
+
+## 15. 문서 전체를 겨냥한 반론은 더 큰 변화를 요구한다 (R5)
+
+**결정:** 대상이 `문서`인 반론은 서문이 바뀌었거나 조건 두 개 이상이 바뀌어야 해소로
+인정한다. 조건 하나만 바뀐 경우는 인정하지 않는다.
+
+**왜:** 처음에는 "조건 하나 이상 또는 서문"이면 통과시켰다. 그런데 반복마다 어차피
+조건 하나는 바뀌므로(R4를 채우려면 반드시 그렇다), 문서 대상 반론은 아무 관련 없는
+편집에 딸려 자동으로 해소될 수 있었다. 문서 전체를 겨냥한 반론을 하나 던져두고 다음
+반복에 거저 닫는 순환이 성립한다. 문서 대상 반론은 구성이나 전제를 겨냥하므로, 그
+해소는 문서의 틀 — 서문이나 여러 조건 — 을 건드려야 한다는 요구가 자연스럽다.
