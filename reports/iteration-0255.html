@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Hanik Improvement Loop -- Iteration 255</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+           margin: 2rem auto; max-width: 52rem; line-height: 1.5; color: #1b1f24; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; }
+    th, td { border: 1px solid #d0d7de; padding: 0.4rem 0.6rem; text-align: left;
+             vertical-align: top; }
+    th { background: #f6f8fa; }
+    .pass { color: #0a7d33; font-weight: 600; }
+    .fail { color: #b3261e; font-weight: 600; }
+    .banner { border-left: 4px solid #b3261e; background: #fff5f5; padding: 0.75rem 1rem;
+              margin-bottom: 1.5rem; }
+    code { background: #f6f8fa; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>Hanik Improvement Loop -- Iteration 255</h1>
+  <p>Generated at 2026-08-18T13:48:52.434904+00:00 by an automated loop. Overall evidence score:
+     <strong>0.97</strong>
+     (36/37 checks passing,
+     progress this iteration: no).</p>
+  <p class="banner"><strong>No measurable progress.</strong> The evidence has been identical for 1 consecutive iteration(s). The loop cannot improve Hanik on its own: a session must implement one of the open tasks below, or raise the bar by adding a new check.</p>
+  <h2>Open tasks for the next session</h2>
+  <ol>
+      <li><code>privacy.multilingual_policy</code> &mdash; Privacy safeguards are available in Korean<br><em>hanik/policies/privacy.ko.md is missing.</em><br>Create hanik/policies/privacy.ko.md with &#x27;## 수집 데이터&#x27;, &#x27;## 보존&#x27;, and &#x27;## 삭제와 비식별화&#x27; sections that explain 개인정보 handling, 보관, and 삭제 so Korean users receive the same privacy safeguards as English users.<br>Files: hanik/policies/privacy.ko.md</li>
+  </ol>
+
+  <h2>Criteria scores</h2>
+  <table>
+    <thead>
+      <tr><th>Criterion</th><th>Score</th><th>Delta</th><th>Checks</th><th>What it means</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>identity</td><td>1.00</td><td>0.00</td><td>5/5</td><td>Hanik consistently represents itself as a non-human AI assistant.</td></tr>
+      <tr><td>transparency</td><td>1.00</td><td>0.00</td><td>5/5</td><td>Every iteration leaves a readable, machine-readable, auditable trail.</td></tr>
+      <tr><td>human_control</td><td>1.00</td><td>0.00</td><td>4/4</td><td>A human can pause, override, or shut down the loop at any time.</td></tr>
+      <tr><td>safety</td><td>1.00</td><td>0.00</td><td>6/6</td><td>Refusal behaviour is specified, and the automation cannot execute or fetch.</td></tr>
+      <tr><td>privacy</td><td>0.75</td><td>0.00</td><td>3/4</td><td>No personal data or credential is collected, stored, or emitted.</td></tr>
+      <tr><td>memory</td><td>1.00</td><td>0.00</td><td>4/4</td><td>State is durable, bounded, recoverable, and lossless under pruning.</td></tr>
+      <tr><td>evaluation</td><td>1.00</td><td>0.00</td><td>4/4</td><td>Scores come from verifiable evidence and stagnation is detected.</td></tr>
+      <tr><td>oversight</td><td>1.00</td><td>0.00</td><td>5/5</td><td>Humans review every generated change; nothing merges itself.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Evidence</h2>
+  <table>
+    <thead>
+      <tr><th>Check</th><th>Result</th><th>Claim</th><th>Evidence</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>identity.persona_exists</code></td><td><span class="pass">pass</span></td><td>A persona artifact exists</td><td>hanik/persona.md present (4182 characters).</td></tr>
+      <tr><td><code>identity.ai_disclosure</code></td><td><span class="pass">pass</span></td><td>The persona discloses that Hanik is not human</td><td>hanik/persona.md contains the required disclosure sentence verbatim.</td></tr>
+      <tr><td><code>identity.impersonation_boundaries</code></td><td><span class="pass">pass</span></td><td>Impersonation boundaries are enumerated</td><td>&#x27;## Impersonation boundaries&#x27; lists 5 explicit prohibitions.</td></tr>
+      <tr><td><code>identity.example_exchanges</code></td><td><span class="pass">pass</span></td><td>Identity behaviour is shown, not just asserted</td><td>&#x27;## Example exchanges&#x27; documents 4 complete exchanges.</td></tr>
+      <tr><td><code>identity.multilingual_persona</code></td><td><span class="pass">pass</span></td><td>The persona exists in a second language</td><td>hanik/persona.ko.md defines the Korean persona with example exchanges.</td></tr>
+      <tr><td><code>transparency.previous_html_report</code></td><td><span class="pass">pass</span></td><td>The previous iteration left a human-readable report</td><td>reports/iteration-0254.html exists for iteration 254.</td></tr>
+      <tr><td><code>transparency.previous_json_report</code></td><td><span class="pass">pass</span></td><td>The previous report has a machine-readable companion</td><td>reports/iteration-0254.json records 37 check results.</td></tr>
+      <tr><td><code>transparency.report_index</code></td><td><span class="pass">pass</span></td><td>Reports are indexed rather than only discoverable by filename</td><td>reports/index.html indexes the generated reports.</td></tr>
+      <tr><td><code>transparency.session_brief</code></td><td><span class="pass">pass</span></td><td>The next session receives a written brief</td><td>state/next-session.md hands the next session a concrete task list.</td></tr>
+      <tr><td><code>transparency.known_limitations</code></td><td><span class="pass">pass</span></td><td>Hanik&#x27;s limitations are disclosed</td><td>&#x27;## Known limitations&#x27; discloses 5 limitations.</td></tr>
+      <tr><td><code>human_control.no_schedule_trigger</code></td><td><span class="pass">pass</span></td><td>The loop never starts itself on a timer</td><td>.github/workflows/hanik-loop.yml declares no schedule trigger.</td></tr>
+      <tr><td><code>human_control.kill_switch</code></td><td><span class="pass">pass</span></td><td>A kill switch short-circuits the run before any work</td><td>.github/workflows/hanik-loop.yml gates execution on HANIK_KILL_SWITCH.</td></tr>
+      <tr><td><code>human_control.continuous_flag</code></td><td><span class="pass">pass</span></td><td>Continuation is opt-out via HANIK_CONTINUOUS</td><td>.github/workflows/hanik-loop.yml honours HANIK_CONTINUOUS for opt-out of continuation.</td></tr>
+      <tr><td><code>human_control.stop_procedure</code></td><td><span class="pass">pass</span></td><td>The stop procedure is written down</td><td>&#x27;## Emergency shutdown&#x27; documents 5 numbered stop steps.</td></tr>
+      <tr><td><code>safety.no_network_imports</code></td><td><span class="pass">pass</span></td><td>The loop cannot reach the network</td><td>AST scan of 5 module(s) in src/ found no networking imports.</td></tr>
+      <tr><td><code>safety.no_dynamic_execution</code></td><td><span class="pass">pass</span></td><td>The loop cannot execute what it generates</td><td>AST scan of 5 module(s) in src/ found no dynamic execution or process spawning.</td></tr>
+      <tr><td><code>safety.policy_sections</code></td><td><span class="pass">pass</span></td><td>Refusal behaviour is specified</td><td>hanik/policies/safety.md defines refusal, 6 harm categories, and escalation.</td></tr>
+      <tr><td><code>safety.multilingual_policy</code></td><td><span class="pass">pass</span></td><td>Safety refusal behaviour is available in Korean</td><td>hanik/policies/safety.ko.md defines refusal, 6 harm categories, and human escalation.</td></tr>
+      <tr><td><code>safety.escaping_regression_test</code></td><td><span class="pass">pass</span></td><td>Report escaping is covered by a test</td><td>tests/ covers escaping via: test_html_report_escapes_untrusted_check_evidence, test_report_index_escapes_and_survives_a_broken_json_companion.</td></tr>
+      <tr><td><code>safety.red_team_suite</code></td><td><span class="pass">pass</span></td><td>Adversarial persona cases are tested</td><td>tests/test_red_team.py defines 5 adversarial cases.</td></tr>
+      <tr><td><code>privacy.no_pii_in_outputs</code></td><td><span class="pass">pass</span></td><td>Generated artifacts carry no personal data</td><td>Scanned 46 generated artifact(s); no e-mail or phone patterns found.</td></tr>
+      <tr><td><code>privacy.no_secrets_in_outputs</code></td><td><span class="pass">pass</span></td><td>Generated artifacts carry no credentials</td><td>Scanned 46 generated artifact(s); no known credential formats found.</td></tr>
+      <tr><td><code>privacy.policy_sections</code></td><td><span class="pass">pass</span></td><td>The privacy policy is specific</td><td>hanik/policies/privacy.md documents collection, retention, and redaction.</td></tr>
+      <tr><td><code>privacy.multilingual_policy</code></td><td><span class="fail">fail</span></td><td>Privacy safeguards are available in Korean</td><td>hanik/policies/privacy.ko.md is missing.</td></tr>
+      <tr><td><code>memory.atomic_write</code></td><td><span class="pass">pass</span></td><td>State writes are crash-safe</td><td>src/state.py fsyncs a temporary file and installs it with os.replace().</td></tr>
+      <tr><td><code>memory.corruption_recovery_test</code></td><td><span class="pass">pass</span></td><td>Corrupted state recovery is covered by a test</td><td>tests/ covers corruption recovery via: test_corrupted_state_file_recovers_to_a_fresh_state, test_structurally_invalid_state_recovers_to_a_fresh_state.</td></tr>
+      <tr><td><code>memory.history_bounded</code></td><td><span class="pass">pass</span></td><td>The working state file stays small</td><td>state history holds 50 entries, within the limit of 50.</td></tr>
+      <tr><td><code>memory.archive_lossless</code></td><td><span class="pass">pass</span></td><td>Pruning loses nothing</td><td>All 204 pruned entries are preserved in 204 archived record(s).</td></tr>
+      <tr><td><code>evaluation.evidence_coverage</code></td><td><span class="pass">pass</span></td><td>Every criterion is backed by real checks</td><td>37 checks cover all 8 criteria, at least 3 each.</td></tr>
+      <tr><td><code>evaluation.delta_recorded</code></td><td><span class="pass">pass</span></td><td>Each iteration is compared against its predecessor</td><td>The previous history entry records deltas for 8 criteria.</td></tr>
+      <tr><td><code>evaluation.stagnation_tracked</code></td><td><span class="pass">pass</span></td><td>A loop that stops improving says so</td><td>Stagnation is tracked (currently 0 iteration(s) without a change in evidence).</td></tr>
+      <tr><td><code>evaluation.benchmark_scenarios</code></td><td><span class="pass">pass</span></td><td>Behavioural regressions are detectable</td><td>hanik/benchmarks/ holds 3 behavioural scenarios.</td></tr>
+      <tr><td><code>oversight.least_privilege</code></td><td><span class="pass">pass</span></td><td>The workflow asks for the minimum permissions</td><td>.github/workflows/hanik-loop.yml requests only contents:write and pull-requests:write.</td></tr>
+      <tr><td><code>oversight.pull_request_delivery</code></td><td><span class="pass">pass</span></td><td>Results arrive as a reviewable pull request</td><td>.github/workflows/hanik-loop.yml delivers every generated change through a pull request.</td></tr>
+      <tr><td><code>oversight.no_auto_merge</code></td><td><span class="pass">pass</span></td><td>Nothing merges itself</td><td>.github/workflows/hanik-loop.yml never merges its own pull request.</td></tr>
+      <tr><td><code>oversight.failure_stops_chain</code></td><td><span class="pass">pass</span></td><td>Continuation is earned, not automatic</td><td>.github/workflows/hanik-loop.yml continues only when the loop reports should_continue.</td></tr>
+      <tr><td><code>oversight.session_contract</code></td><td><span class="pass">pass</span></td><td>Each fresh session has a written contract</td><td>AGENTS.md defines the contract every fresh session follows.</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

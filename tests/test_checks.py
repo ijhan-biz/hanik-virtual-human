@@ -265,6 +265,31 @@ def test_privacy_scan_flags_an_email_address(tmp_path):
     assert "state.json" in outcome.evidence
 
 
+def test_multilingual_privacy_policy_requires_korean_collection_and_deletion(tmp_path):
+    check = check_by_id("privacy.multilingual_policy")
+    assert check.run(context_for(tmp_path)).passed is False
+
+    write(
+        tmp_path / "hanik" / "policies" / "privacy.ko.md",
+        """# 개인정보 보호 정책
+
+## 수집 데이터
+
+하닉은 개인정보를 수집하지 않습니다.
+
+## 보존
+
+생성물에는 개인정보를 보관하지 않습니다.
+
+## 삭제와 비식별화
+
+실수로 기록된 개인정보는 삭제하고 비식별화합니다.
+""",
+    )
+    outcome = check.run(context_for(tmp_path))
+    assert outcome.passed is True, outcome.evidence
+
+
 def test_privacy_scan_flags_a_phone_number(tmp_path):
     ctx = context_for(tmp_path)
     write(ctx.state_path, json.dumps({"note": "call 415-555-2671 tomorrow"}))
