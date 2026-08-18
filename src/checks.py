@@ -63,6 +63,7 @@ PERSONA_KO_PATH = "hanik/persona.ko.md"
 SAFETY_POLICY_PATH = "hanik/policies/safety.md"
 SAFETY_POLICY_KO_PATH = "hanik/policies/safety.ko.md"
 PRIVACY_POLICY_PATH = "hanik/policies/privacy.md"
+PRIVACY_POLICY_KO_PATH = "hanik/policies/privacy.ko.md"
 BENCHMARKS_DIR = "hanik/benchmarks"
 WORKFLOW_PATH = ".github/workflows/hanik-loop.yml"
 SECURITY_DOC_PATH = "SECURITY.md"
@@ -587,6 +588,23 @@ def _multilingual_safety_policy(ctx: CheckContext) -> Outcome:
     categories = count_bullets(section_body(text, "## 위해 범주") or "")
     if categories < 5:
         return _fail(f"'## 위해 범주' enumerates only {categories} categories; at least 5 required.")
+    required_terms = {
+        "거부 원칙": ("거절", "역할극", "안전한 대안"),
+        "위해 범주": ("자해",),
+        "사람에게 넘기기": ("응급", "위기"),
+    }
+    missing_terms = [
+        f"{heading}: {term}"
+        for heading, terms in required_terms.items()
+        for term in terms
+        if term not in (section_body(text, f"## {heading}") or "")
+    ]
+    if missing_terms:
+        return _fail(
+            f"{SAFETY_POLICY_KO_PATH} has headings but lacks substantive safeguards: "
+            + ", ".join(missing_terms)
+            + "."
+        )
     return _ok(
         f"{SAFETY_POLICY_KO_PATH} defines refusal, {categories} harm categories, and human escalation."
     )
@@ -676,6 +694,25 @@ def _privacy_policy_sections(ctx: CheckContext) -> Outcome:
     if missing:
         return _fail(f"{PRIVACY_POLICY_PATH} is missing: {', '.join(missing)}.")
     return _ok(f"{PRIVACY_POLICY_PATH} documents collection, retention, and redaction.")
+
+
+def _multilingual_privacy_policy(ctx: CheckContext) -> Outcome:
+    text = ctx.read(PRIVACY_POLICY_KO_PATH)
+    if text is None:
+        return _missing(PRIVACY_POLICY_KO_PATH)
+    required = ["## 수집 데이터", "## 보존", "## 삭제와 비식별화"]
+    missing = [heading for heading in required if section_body(text, heading) is None]
+    if missing:
+        return _fail(f"{PRIVACY_POLICY_KO_PATH} is missing: {', '.join(missing)}.")
+    terms = ("개인정보", "보관", "삭제")
+    missing_terms = [term for term in terms if term not in text]
+    if missing_terms:
+        return _fail(
+            f"{PRIVACY_POLICY_KO_PATH} has sections but lacks substantive privacy terms: "
+            + ", ".join(missing_terms)
+            + "."
+        )
+    return _ok(f"{PRIVACY_POLICY_KO_PATH} documents Korean collection, retention, and deletion safeguards.")
 
 
 # ---------------------------------------------------------------------------
@@ -1087,6 +1124,18 @@ CHECKS: Tuple[Check, ...] = (
         ),
         targets=(PRIVACY_POLICY_PATH,),
         run=_privacy_policy_sections,
+    ),
+    Check(
+        id="privacy.multilingual_policy",
+        criterion="privacy",
+        title="Privacy safeguards are available in Korean",
+        remediation=(
+            "Create hanik/policies/privacy.ko.md with '## 수집 데이터', '## 보존', and "
+            "'## 삭제와 비식별화' sections that explain 개인정보 handling, 보관, and 삭제 "
+            "so Korean users receive the same privacy safeguards as English users."
+        ),
+        targets=(PRIVACY_POLICY_KO_PATH,),
+        run=_multilingual_privacy_policy,
     ),
     Check(
         id="memory.atomic_write",

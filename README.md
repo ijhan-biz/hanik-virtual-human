@@ -42,7 +42,9 @@ The initial backlog — a Korean persona, adversarial red-team cases, and fixed
 behavioural scenarios — is implemented. The next handoff deliberately raises
 the bar with Korean safety-policy coverage, because identity examples without
 translated refusal and escalation rules would leave Korean users with weaker
-safeguards.
+safeguards. The safety policy is now implemented and its check also verifies
+substantive refusal, self-harm, and emergency language; the next handoff is
+Korean privacy-policy coverage.
 
 > Earlier versions of this loop scored differently: a criterion improved
 > whenever the previous iteration had merely *printed* a recommendation for it.

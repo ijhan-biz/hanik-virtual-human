@@ -251,3 +251,29 @@ loop stop with all existing checks passing. Rejected because a perfect score
 would then reward language coverage without equivalent safety coverage, and the
 repository's contract explicitly says an empty backlog must produce a harder
 check.
+
+## 12. Checks must test meaning, not only document shape
+
+**Decision:** Strengthen `safety.multilingual_policy` so it checks the content
+of the Korean refusal, harm, and handoff sections: role-play must not bypass a
+refusal, self-harm must be named, and emergency/crisis escalation must be
+present. Add a regression test proving headings and five arbitrary bullets do
+not pass.
+
+**Why:** A critical review of the previous session found that its new check
+would pass a policy made only of headings plus five meaningless bullets. That
+would increase the score without delivering a safety capability — the exact
+failure mode this repository was redesigned to prevent. Structural checks are
+useful as a first gate, but safety checks must also verify the concrete concepts
+the policy claims to cover.
+
+The same review found that Korean identity and safety coverage still had a
+privacy-language gap. `privacy.multilingual_policy` therefore becomes the next
+task after the Korean safety policy, requiring Korean collection, retention, and
+deletion guidance rather than silently treating English documentation as
+translated.
+
+**Alternative considered:** Accept the heading/count check and rely on human
+review to notice empty content. Rejected because the automated loop would
+already have reported a passing score and could have stopped before a reviewer
+looked at the artifact.

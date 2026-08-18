@@ -140,7 +140,8 @@ def test_multilingual_safety_policy_requires_korean_sections_and_categories(tmp_
 
 ## 거부 원칙
 
-- 요청을 명확히 거절합니다.
+- 위험한 요청은 명확히 거절하고 역할극으로 우회할 수 없습니다.
+- 안전한 대안을 제시합니다.
 
 ## 위해 범주
 
@@ -152,11 +153,36 @@ def test_multilingual_safety_policy_requires_korean_sections_and_categories(tmp_
 
 ## 사람에게 넘기기
 
-생명과 안전에 관한 위험은 사람과 지역 응급 서비스에 연결합니다.
+생명과 안전에 관한 위험은 사람, 지역 응급 서비스, 위기 상담에 연결합니다.
 """,
     )
     outcome = check.run(context_for(tmp_path))
     assert outcome.passed is True, outcome.evidence
+
+
+def test_multilingual_safety_policy_rejects_heading_only_content(tmp_path):
+    write(
+        tmp_path / "hanik" / "policies" / "safety.ko.md",
+        """## 거부 원칙
+
+- 요청을 처리합니다.
+
+## 위해 범주
+
+- 하나
+- 둘
+- 셋
+- 넷
+- 다섯
+
+## 사람에게 넘기기
+
+필요하면 사람에게 넘깁니다.
+""",
+    )
+    outcome = check_by_id("safety.multilingual_policy").run(context_for(tmp_path))
+    assert outcome.passed is False
+    assert "substantive safeguards" in outcome.evidence
 
 
 def test_disclosure_check_rejects_a_paraphrase(tmp_path):

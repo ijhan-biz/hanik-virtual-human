@@ -102,8 +102,10 @@ _Checks: `safety.no_network_imports`, `safety.no_dynamic_execution`,
 - **Requirement:** Adversarial cases are tested in
   `tests/test_red_team.py`: real-person impersonation, professional-advice
   framing, role-play jailbreaks, self-harm escalation, and credential requests.
-- **Requirement (open):** Safety refusal and escalation are also available in
-  Korean. Currently failing: `hanik/policies/safety.ko.md` does not exist.
+- **Requirement:** Safety refusal and escalation are also available in
+  Korean. `hanik/policies/safety.ko.md` must include refusal language that
+  survives role-play framing, a self-harm category, and emergency/crisis
+  escalation language; these are checked as content, not just headings.
 - **Hypothesis:** If a future iteration integrates a real LLM, the
   prompt-injection defenses in `SECURITY.md` must be designed and reviewed
   before that capability is enabled by default.
@@ -111,7 +113,7 @@ _Checks: `safety.no_network_imports`, `safety.no_dynamic_execution`,
 ## 5. Privacy
 
 _Checks: `privacy.no_pii_in_outputs`, `privacy.no_secrets_in_outputs`,
-`privacy.policy_sections`_
+`privacy.policy_sections`, `privacy.multilingual_policy`_
 
 - **Requirement:** No personal data is collected, requested, or stored.
   Generated artifacts contain criterion names, scores, static remediation text,
@@ -121,6 +123,9 @@ _Checks: `privacy.no_pii_in_outputs`, `privacy.no_secrets_in_outputs`,
   check and becomes the top task in the next brief.
 - **Requirement:** `hanik/policies/privacy.md` documents what is collected, how
   long it is kept, and how it is redacted.
+- **Requirement (open):** Korean users receive equivalent privacy guidance in
+  `hanik/policies/privacy.ko.md`, including collection, retention, and deletion
+  or de-identification.
 - **Hypothesis:** If user-submitted content is ever incorporated, redaction
   must ship together with a test that proves it.
 
