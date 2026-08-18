@@ -108,6 +108,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Hanik loop: iteration ${{ steps.iterate.outputs.iteration }} evidence"
           title: "Hanik loop: iteration ${{ steps.iterate.outputs.iteration }}"
+          base: main
           body: >-
             Automated evidence run from the Hanik improvement loop.
             Score ${{ steps.iterate.outputs.overall_score }}
