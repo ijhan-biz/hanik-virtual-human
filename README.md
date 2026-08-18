@@ -78,6 +78,29 @@ python3 -m src.hanik_loop
 
 한 번의 호출이 정확히 한 번의 반복이다. 규칙을 어기면 0이 아닌 코드로 끝난다.
 
+### 자동 실행
+
+수동으로 멈출 때까지 새 Copilot 세션을 반복 실행하려면 다음을 사용한다.
+
+```bash
+scripts/hanik_autorun.sh run
+```
+
+각 세션은 `state/next-session.md`를 읽고 한 과제를 구현한 뒤 테스트와 evaluator를
+실행한다. 커밋·푸시·PR은 자동으로 만들지 않는다. 로그는 `.hanik-auto/logs/runner.log`에
+남는다.
+
+별도 터미널에서 상태를 확인하거나 중단할 수 있다.
+
+```bash
+scripts/hanik_autorun.sh status
+scripts/hanik_autorun.sh stop
+```
+
+기본 세션 간격은 10초이며 `HANIK_AUTO_INTERVAL=0`으로 즉시 다음 세션을 시작한다.
+러너는 네트워크 URL과 내장 GitHub MCP를 끄고 실행한다. 자동 실행은 판단을 대신하지
+않으며, 각 세션이 `Hanik.md`와 `objections/`를 실제로 고쳐야 다음 반복이 진행된다.
+
 | 산출물 | 용도 |
 | --- | --- |
 | `reports/iteration-NNNN.md` | 관측 지표, 이번 변화, 규칙 결과 |
