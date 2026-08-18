@@ -43,6 +43,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The first run starts from the selected ref (normally main). Once
+          # the loop dispatches its next fresh session, continue from the
+          # results branch so state/next-session.md and the prior evidence are
+          # available even though the pull request is still awaiting review.
+          ref: ${{ github.event_name == 'repository_dispatch' && 'hanik-loop/iteration-results' || github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
