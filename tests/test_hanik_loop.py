@@ -235,6 +235,23 @@ def test_continuation_can_be_disabled_by_a_human(workdir, monkeypatch):
     assert result.should_continue is False
 
 
+def test_continuation_stops_at_an_invalid_or_expired_deadline(workdir, monkeypatch):
+    state_path, reports_dir = workdir
+    monkeypatch.setenv(loop.RUN_UNTIL_ENV_VAR, "not-a-date")
+    invalid = loop.run_iteration(
+        state_path=state_path,
+        reports_dir=reports_dir,
+        repo_root=REPO_ROOT,
+        checks=ONE_OF_TWO,
+    )
+    assert invalid.should_continue is False
+
+    monkeypatch.setenv(loop.RUN_UNTIL_ENV_VAR, "2026-08-18T13:00:00Z")
+    assert loop.continuation_before_deadline(
+        now=loop.datetime(2026, 8, 18, 14, 0, tzinfo=loop.timezone.utc)
+    ) is False
+
+
 # ---------------------------------------------------------------------------
 # Report safety
 # ---------------------------------------------------------------------------

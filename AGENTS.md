@@ -68,6 +68,9 @@ its checks that pass. Nothing improves unless an artifact changes.
   re-running changes nothing. Implement something or escalate to a human;
   the workflow will stop the chain on its own after
   `HANIK_STAGNATION_LIMIT` no-progress iterations.
+- **Respect the campaign deadline.** If `HANIK_RUN_UNTIL` is set, it is an
+  ISO-8601 UTC end time. Do not extend it from a session; the human who started
+  the campaign controls its duration.
 - **Stay offline and inert.** `src/` must not import networking modules and
   must not execute anything it generates; both are enforced by AST scans in
   `safety.no_network_imports` and `safety.no_dynamic_execution`.

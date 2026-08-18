@@ -101,6 +101,7 @@ Requirements for the chain to continue:
 | `HANIK_STAGNATION_LIMIT` | `2` | Consecutive no-change iterations before stopping |
 | `HANIK_HISTORY_LIMIT` | `50` | History entries kept in `state/state.json` |
 | `HANIK_MAX_ITERATIONS` | `10000` | Absolute ceiling on the iteration counter |
+| `HANIK_RUN_UNTIL` | unset | Optional ISO-8601 UTC deadline for a bounded campaign |
 
 A failed run never chains. Neither does a stagnant one: if the evidence has not
 changed for `HANIK_STAGNATION_LIMIT` iterations, re-running cannot help, so the
@@ -110,6 +111,11 @@ This is deliberately different from running the evaluator repeatedly. A fresh
 runner alone cannot improve Hanik; the implementation session is the part that
 turns the previous brief into a real artifact change. If Copilot makes no
 change, the workflow fails before it can create a false-progress report.
+
+For a time-bounded campaign, set `HANIK_RUN_UNTIL` to a UTC timestamp. Each
+iteration checks the deadline before requesting another run, so a 24-hour
+campaign stops at its declared end without needing a timer trigger or an
+unbounded process.
 
 ## The loop cannot finish
 

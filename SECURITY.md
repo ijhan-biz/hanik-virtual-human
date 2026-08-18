@@ -124,6 +124,9 @@ these rules:
   keep consuming runner minutes.
 - `HANIK_MAX_ITERATIONS` (default `10000`) is an absolute backstop on the
   iteration counter.
+- `HANIK_RUN_UNTIL` is an optional ISO-8601 UTC deadline for a bounded campaign.
+  The evaluator fails closed on an invalid value and does not request another
+  run after the deadline.
 - `concurrency` is configured in the workflow so overlapping runs on the
   same ref cancel or queue rather than running in parallel and racing on
   `state/state.json`.

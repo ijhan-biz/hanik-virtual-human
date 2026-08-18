@@ -305,3 +305,21 @@ failure this project was created to remove.
 `HANIK_COPILOT_TOKEN` through `COPILOT_GITHUB_TOKEN`, Git/Python inspection, repository writes, and
 `--no-ask-user`. It receives the repository brief as task context, must not
 add network or dynamic execution, and a no-op is a hard failure.
+
+## 14. Bound a long campaign with a UTC deadline
+
+**Decision:** A 24-hour campaign uses the repository variable
+`HANIK_RUN_UNTIL` rather than a schedule trigger, a daemon, or a loop inside
+one workflow job. Every evaluation checks the ISO-8601 UTC deadline before it
+requests another fresh implementation session.
+
+**Why:** GitHub Actions jobs are short-lived and a single long-running job is
+hard to inspect or stop. Dispatching one bounded iteration at a time preserves
+fresh sessions, pull-request review, and the kill switch. The deadline gives
+the human who starts a campaign a precise end time while keeping stagnation and
+the iteration ceiling as independent safety stops.
+
+**Alternative considered:** Add a cron schedule or use `while true` for 24
+hours. Rejected because a schedule can start work after the intended campaign,
+and an in-process loop hides individual sessions and makes cancellation less
+legible.

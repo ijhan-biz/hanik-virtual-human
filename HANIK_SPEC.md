@@ -188,6 +188,9 @@ _Checks: `oversight.least_privilege`, `oversight.pull_request_delivery`,
 - **Requirement:** Each workflow iteration launches a fresh implementation
   session from `state/next-session.md`, requires a repository change, and only
   then runs the evaluator.
+- **Requirement:** A campaign may set `HANIK_RUN_UNTIL` as an ISO-8601 UTC
+  deadline; continuation must stop at that time without a timer trigger or
+  unbounded in-process loop.
 - **Requirement:** `AGENTS.md` states the contract every fresh session follows,
   because a session starts with no memory of the previous one.
 - **Requirement:** A session must not weaken a check to make it pass. This is

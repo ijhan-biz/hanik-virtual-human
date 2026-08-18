@@ -75,6 +75,7 @@ DEFAULT_STAGNATION_LIMIT = 2
 STAGNATION_LIMIT_ENV_VAR = "HANIK_STAGNATION_LIMIT"
 
 CONTINUOUS_ENV_VAR = "HANIK_CONTINUOUS"
+RUN_UNTIL_ENV_VAR = "HANIK_RUN_UNTIL"
 
 
 class HanikLoopError(Exception):
@@ -142,6 +143,26 @@ def continuation_enabled() -> bool:
     """Return False when a human has explicitly disabled continuation."""
 
     return os.environ.get(CONTINUOUS_ENV_VAR, "").strip().lower() != "false"
+
+
+def continuation_before_deadline(now: Optional[datetime] = None) -> bool:
+    """Return whether an optional UTC run deadline still permits continuation.
+
+    An invalid configured deadline fails closed. An unset deadline preserves
+    the normal continuous-loop behaviour.
+    """
+
+    raw = os.environ.get(RUN_UNTIL_ENV_VAR, "").strip()
+    if not raw:
+        return True
+    try:
+        deadline = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if deadline.tzinfo is None:
+        return False
+    current = now or datetime.now(timezone.utc)
+    return current < deadline.astimezone(timezone.utc)
 
 
 def _previous_entry(state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -304,6 +325,7 @@ def run_iteration(
     # implementation session fails to change any measured outcome.
     should_continue = (
         continuation_enabled()
+        and continuation_before_deadline()
         and stagnant_iterations < stagnation_limit
         and next_iteration < max_iterations
     )

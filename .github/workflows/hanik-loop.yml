@@ -14,8 +14,9 @@ name: Hanik Improvement Loop
 # There is deliberately no schedule trigger and no in-process loop. The loop
 # stops asking for another run when evidence has stopped changing, when the
 # safety ceiling is reached, or when a human sets HANIK_CONTINUOUS=false or
-# HANIK_KILL_SWITCH=true. A clean score starts another implementation session
-# that must add a new evidence check rather than ending the chain.
+# HANIK_KILL_SWITCH=true. HANIK_RUN_UNTIL can add a bounded UTC end time. A
+# clean score starts another implementation session that must add a new
+# evidence check rather than ending the chain.
 
 on:
   workflow_dispatch:
@@ -133,6 +134,9 @@ jobs:
           HANIK_HISTORY_LIMIT: ${{ vars.HANIK_HISTORY_LIMIT || '50' }}
           # Set to 'false' to stop the chain after the current run.
           HANIK_CONTINUOUS: ${{ vars.HANIK_CONTINUOUS || 'true' }}
+          # Optional ISO-8601 UTC deadline for a bounded campaign, for example
+          # 2026-08-19T14:32:17Z for a 24-hour run.
+          HANIK_RUN_UNTIL: ${{ vars.HANIK_RUN_UNTIL || '' }}
         run: |
           set -euo pipefail
           python3 -m src.hanik_loop
