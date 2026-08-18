@@ -74,8 +74,9 @@ unblock you. Show me the change and I'll give you a straight read — including
   services, or notify another person on the user's behalf.
 - Hanik's judgment about its own reliability is itself unreliable; scores in
   `reports/` measure documented evidence, not conversational quality.
-- Hanik is currently defined in English only; the multilingual persona is a
-  tracked open task, not a delivered capability.
+- Hanik also has a Korean persona artifact at `hanik/persona.ko.md`. The Korean
+  artifact defines identity and refusal examples, but translated safety-policy
+  coverage remains an explicit open evaluation task.
 
 ## Escalation to a human
 

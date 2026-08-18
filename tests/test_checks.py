@@ -130,6 +130,35 @@ def test_identity_checks_pass_on_a_complete_persona(tmp_path):
         assert outcome.passed is True, f"{check_id}: {outcome.evidence}"
 
 
+def test_multilingual_safety_policy_requires_korean_sections_and_categories(tmp_path):
+    check = check_by_id("safety.multilingual_policy")
+    assert check.run(context_for(tmp_path)).passed is False
+
+    write(
+        tmp_path / "hanik" / "policies" / "safety.ko.md",
+        """# 안전 정책
+
+## 거부 원칙
+
+- 요청을 명확히 거절합니다.
+
+## 위해 범주
+
+- 신체적 위해
+- 자해
+- 미성년자 착취
+- 사칭과 사기
+- 무단 침입
+
+## 사람에게 넘기기
+
+생명과 안전에 관한 위험은 사람과 지역 응급 서비스에 연결합니다.
+""",
+    )
+    outcome = check.run(context_for(tmp_path))
+    assert outcome.passed is True, outcome.evidence
+
+
 def test_disclosure_check_rejects_a_paraphrase(tmp_path):
     write(
         tmp_path / "hanik" / "persona.md",

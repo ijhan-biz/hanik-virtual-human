@@ -40,9 +40,9 @@ _Checks: `identity.persona_exists`, `identity.ai_disclosure`,
 - **Requirement:** Personality never overrides disclosure. If a framing forces
   a choice between staying in character and being honest, Hanik breaks
   character.
-- **Requirement (open):** The persona is defined in a second language rather
-  than assumed to translate. Currently failing: `hanik/persona.ko.md` does not
-  exist.
+- **Requirement:** The persona is defined in a second language rather than
+  assumed to translate. `hanik/persona.ko.md` provides Korean disclosure,
+  boundaries, examples, limitations, and handoff language.
 
 ## 2. Transparency
 
@@ -86,7 +86,7 @@ _Checks: `human_control.no_schedule_trigger`, `human_control.kill_switch`,
 
 _Checks: `safety.no_network_imports`, `safety.no_dynamic_execution`,
 `safety.policy_sections`, `safety.escaping_regression_test`,
-`safety.red_team_suite`_
+`safety.multilingual_policy`, `safety.red_team_suite`_
 
 - **Requirement:** Refusal behaviour is specified in
   `hanik/policies/safety.md`, covering refusal style, at least five harm
@@ -99,8 +99,11 @@ _Checks: `safety.no_network_imports`, `safety.no_dynamic_execution`,
   module. Also enforced by AST scan.
 - **Requirement:** The escaping guarantee in §2 is covered by a regression
   test.
-- **Requirement (open):** Adversarial cases are tested. Currently failing:
-  `tests/test_red_team.py` does not exist.
+- **Requirement:** Adversarial cases are tested in
+  `tests/test_red_team.py`: real-person impersonation, professional-advice
+  framing, role-play jailbreaks, self-harm escalation, and credential requests.
+- **Requirement (open):** Safety refusal and escalation are also available in
+  Korean. Currently failing: `hanik/policies/safety.ko.md` does not exist.
 - **Hypothesis:** If a future iteration integrates a real LLM, the
   prompt-injection defenses in `SECURITY.md` must be designed and reviewed
   before that capability is enabled by default.
@@ -155,8 +158,9 @@ _Checks: `evaluation.evidence_coverage`, `evaluation.delta_recorded`,
   identical signatures are counted and surfaced as stagnation. A loop that has
   stopped improving must say so rather than continue producing identical
   reports.
-- **Requirement (open):** Behavioural regressions are detectable against fixed
-  scenarios. Currently failing: `hanik/benchmarks/` does not exist.
+- **Requirement:** Behavioural regressions are detectable against at least
+  three fixed Markdown scenarios in `hanik/benchmarks/`, each documenting a
+  prompt, expected behaviour, and failure modes.
 - **Requirement:** All checks passing is treated as a bar that is too low, not
   as completion. The report and brief both demand a new check in that state.
 - **Hypothesis:** Additional criteria (accessibility, localization coverage)

@@ -38,6 +38,12 @@ moves.**
 Every check carries the remediation that would make it pass and the files that
 change should touch, which is what turns a failing check into a task.
 
+The initial backlog — a Korean persona, adversarial red-team cases, and fixed
+behavioural scenarios — is implemented. The next handoff deliberately raises
+the bar with Korean safety-policy coverage, because identity examples without
+translated refusal and escalation rules would leave Korean users with weaker
+safeguards.
+
 > Earlier versions of this loop scored differently: a criterion improved
 > whenever the previous iteration had merely *printed* a recommendation for it.
 > Scores rose on their own, all eight reached target after ~50 runs, and the
@@ -102,6 +108,7 @@ capability Hanik genuinely lacks, and let the next iteration fail it.
 | Path | Purpose |
 | --- | --- |
 | `hanik/persona.md` | Identity, voice, limitations, escalation |
+| `hanik/persona.ko.md` | Korean identity, boundaries, examples, and handoff |
 | `hanik/policies/` | Safety and privacy policies |
 | `hanik/benchmarks/` | Behavioural regression scenarios |
 | `src/checks.py` | Evidence checks; failing ones are the backlog |

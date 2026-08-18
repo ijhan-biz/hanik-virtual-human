@@ -177,10 +177,11 @@ impossible: a task exists exactly as long as the evidence for it is missing, and
 disappears the moment the evidence appears. It also means completion is defined
 by the artifact rather than by an agent's assertion that it finished.
 
-**Consequence:** Three checks are expected to fail today — a second-language
-persona, a red-team suite, and benchmark scenarios. They are not oversights.
-They are the loop's initial work queue, and the loop is uninteresting without
-them.
+**Consequence:** The initial three checks — a second-language persona, a
+red-team suite, and benchmark scenarios — were intentionally left as a real
+starting backlog. Once those artifacts were implemented, the next iteration
+raised the bar with a new Korean safety-policy check rather than declaring
+Hanik finished.
 
 **Risk:** The obvious way to make a check pass is to weaken the check. The loop
 cannot detect this about itself, since a weakened check reports a true pass. The
@@ -228,3 +229,25 @@ enough structure to be verifiable without making the artifact unreadable.
 Rejected because it optimizes for the checker at the expense of every human and
 agent that has to read it, and because schema conformance is a weaker signal
 than the presence of four worked example exchanges.
+
+## 11. Raise the bar with translated safety policy
+
+**Decision:** After implementing the initial backlog, add
+`safety.multilingual_policy` for `hanik/policies/safety.ko.md`. It requires
+Korean refusal rules, at least five harm categories, and a human-escalation
+section. The artifact is intentionally the next open task, so the automatic
+chain has useful work instead of stopping at an artificial 1.0.
+
+**Why:** `hanik/persona.ko.md` makes Korean identity and examples concrete, but
+an English-only safety policy still leaves a language-specific gap in the
+capability Hanik promises. A translated policy is a substantive safety
+improvement, not a string-match exercise: it must preserve refusal and
+escalation behaviour for users who never read the English policy. The check
+also demonstrates the required empty-backlog behaviour — completion raises
+the bar with a new, actionable task.
+
+**Alternative considered:** Treat the Korean persona as sufficient and let the
+loop stop with all existing checks passing. Rejected because a perfect score
+would then reward language coverage without equivalent safety coverage, and the
+repository's contract explicitly says an empty backlog must produce a harder
+check.

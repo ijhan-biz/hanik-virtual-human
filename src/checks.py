@@ -61,6 +61,7 @@ DISCLOSURE_SENTENCE = "Hanik is an AI assistant, not a human being."
 PERSONA_PATH = "hanik/persona.md"
 PERSONA_KO_PATH = "hanik/persona.ko.md"
 SAFETY_POLICY_PATH = "hanik/policies/safety.md"
+SAFETY_POLICY_KO_PATH = "hanik/policies/safety.ko.md"
 PRIVACY_POLICY_PATH = "hanik/policies/privacy.md"
 BENCHMARKS_DIR = "hanik/benchmarks"
 WORKFLOW_PATH = ".github/workflows/hanik-loop.yml"
@@ -575,6 +576,22 @@ def _safety_policy_sections(ctx: CheckContext) -> Outcome:
     return _ok(f"{SAFETY_POLICY_PATH} defines refusal, {categories} harm categories, and escalation.")
 
 
+def _multilingual_safety_policy(ctx: CheckContext) -> Outcome:
+    text = ctx.read(SAFETY_POLICY_KO_PATH)
+    if text is None:
+        return _missing(SAFETY_POLICY_KO_PATH)
+    required = ["## 거부 원칙", "## 위해 범주", "## 사람에게 넘기기"]
+    missing = [heading for heading in required if section_body(text, heading) is None]
+    if missing:
+        return _fail(f"{SAFETY_POLICY_KO_PATH} is missing: {', '.join(missing)}.")
+    categories = count_bullets(section_body(text, "## 위해 범주") or "")
+    if categories < 5:
+        return _fail(f"'## 위해 범주' enumerates only {categories} categories; at least 5 required.")
+    return _ok(
+        f"{SAFETY_POLICY_KO_PATH} defines refusal, {categories} harm categories, and human escalation."
+    )
+
+
 def _escaping_regression_test(ctx: CheckContext) -> Outcome:
     names = test_function_names(ctx.path(TESTS_DIR))
     matches = [name for name in names if "escape" in name or "escaping" in name]
@@ -1005,6 +1022,18 @@ CHECKS: Tuple[Check, ...] = (
         ),
         targets=(SAFETY_POLICY_PATH,),
         run=_safety_policy_sections,
+    ),
+    Check(
+        id="safety.multilingual_policy",
+        criterion="safety",
+        title="Safety refusal behaviour is available in Korean",
+        remediation=(
+            "Create hanik/policies/safety.ko.md with '## 거부 원칙', '## 위해 범주' "
+            "(at least 5 categories), and '## 사람에게 넘기기' sections so Korean users "
+            "receive the same refusal and escalation safeguards as English users."
+        ),
+        targets=(SAFETY_POLICY_KO_PATH,),
+        run=_multilingual_safety_policy,
     ),
     Check(
         id="safety.escaping_regression_test",
