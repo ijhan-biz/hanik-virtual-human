@@ -892,6 +892,7 @@ def _implementation_agent(ctx: CheckContext) -> Outcome:
         "state/next-session.md",
         "--no-ask-user",
         "COPILOT_GITHUB_TOKEN",
+        "HANIK_COPILOT_TOKEN",
     )
     missing = [token for token in required if token not in text]
     if missing:

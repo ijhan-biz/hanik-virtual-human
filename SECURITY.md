@@ -51,10 +51,10 @@ maintainers and any automated agent operating on this repository.
 
 - No API keys, tokens, or credentials are hard-coded anywhere in this
   repository.
-- Copilot CLI authenticates through the Actions-provided `GITHUB_TOKEN` via
-  `COPILOT_GITHUB_TOKEN`. The organization must enable Copilot requests for
-  Actions; if that policy is unavailable, the workflow must use a separately
-  scoped secret with only the Copilot Requests permission rather than reusing
+- Copilot CLI authenticates through the dedicated `HANIK_COPILOT_TOKEN`
+  repository secret via `COPILOT_GITHUB_TOKEN`. It must be a fine-grained token
+  with only the Copilot Requests permission. The workflow fails clearly when
+  it is absent; it never silently falls back to `GITHUB_TOKEN` or reuses
   `HANIK_DISPATCH_TOKEN`.
 - The only credential used by the automated dispatch path is
   `HANIK_DISPATCH_TOKEN`, a **separate, minimally-scoped** GitHub token

@@ -302,6 +302,6 @@ those signals do not improve Hanik and would recreate the fabricated-scoring
 failure this project was created to remove.
 
 **Security boundary:** Copilot CLI runs once per ephemeral workflow runner with
-`COPILOT_GITHUB_TOKEN`, Git/Python inspection, repository writes, and
+`HANIK_COPILOT_TOKEN` through `COPILOT_GITHUB_TOKEN`, Git/Python inspection, repository writes, and
 `--no-ask-user`. It receives the repository brief as task context, must not
 add network or dynamic execution, and a no-op is a hard failure.

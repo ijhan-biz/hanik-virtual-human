@@ -91,6 +91,8 @@ Requirements for the chain to continue:
 - `HANIK_CONTINUOUS` is not `false`.
 - The repository secret `HANIK_DISPATCH_TOKEN` exists — a minimally-scoped
   token dedicated to this one purpose (see [`SECURITY.md`](SECURITY.md)).
+- The repository secret `HANIK_COPILOT_TOKEN` exists — a fine-grained token
+  with only the Copilot Requests permission for the implementation session.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |

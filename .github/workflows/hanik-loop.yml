@@ -51,6 +51,24 @@ jobs:
           # available even though the pull request is still awaiting review.
           ref: ${{ github.event_name == 'repository_dispatch' && 'hanik-loop/iteration-results' || github.ref }}
 
+      - name: Sync the implementation branch with main
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          set -euo pipefail
+          git config user.name "hanik-loop[bot]"
+          git config user.email "hanik-loop[bot]@users.noreply.github.com"
+          git fetch origin main
+          if ! git merge --no-edit -X ours origin/main; then
+            git checkout --ours .
+            git add -A
+            git commit -m "Preserve iteration branch while syncing main"
+          fi
+          git checkout origin/main -- .github/workflows/hanik-loop.yml
+          if ! git diff --cached --quiet; then
+            git add .github/workflows/hanik-loop.yml
+            git commit -m "Sync loop workflow baseline"
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -67,9 +85,13 @@ jobs:
       - name: Implement one brief task
         id: implement
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.HANIK_COPILOT_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${COPILOT_GITHUB_TOKEN:-}" ]; then
+            echo "HANIK_COPILOT_TOKEN is required: add a fine-grained token with Copilot Requests permission." >&2
+            exit 1
+          fi
           before="$(git rev-parse HEAD)"
           if [ -n "$(git status --porcelain)" ]; then
             echo "The implementation session must start from a clean checkout." >&2
@@ -154,6 +176,7 @@ jobs:
             A human reviews and lands this; the loop never lands its own work.
           branch: hanik-loop/iteration-results
           add-paths: |
+            .github/workflows/hanik-loop.yml
             hanik/
             src/
             tests/
