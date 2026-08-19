@@ -59,10 +59,32 @@ def measure(document: Document, backlog: Backlog, review: Review) -> Metrics:
     )
 
 
+# 한 반복에서 실질 분량이 이 비율 이상 줄면 보고서와 브리프가 따로 알린다. 정리는
+# 갈아내는 일이지 지우는 일이므로, 절반이 한 번에 사라졌다면 사람이 읽어야 한다.
+# 막지는 않는다 — 무엇이 남고 무엇이 사라졌는지는 기계가 판정할 수 없고, 판정할 수
+# 없는 것을 막으면 정당한 압축까지 함께 막힌다. 대신 놓칠 수 없게 만든다.
+LARGE_CUT = 0.5
+
+
+def _delta(review: Review, metrics: Metrics) -> str:
+    before = review.previous_size
+    if before is None or before == metrics.substance_length:
+        return ""
+    return f" (직전 {before}자에서 {metrics.substance_length - before:+d}자)"
+
+
+def large_cut(review: Review, metrics: Metrics) -> float | None:
+    """이번 반복이 실질 분량을 크게 덜어냈으면 그 비율. 아니면 None."""
+    before = review.previous_size
+    if not before or metrics.substance_length >= before:
+        return None
+    removed = (before - metrics.substance_length) / before
+    return removed if removed >= LARGE_CUT else None
+
+
 def raised_at(objection: Objection) -> int:
     match = _ITERATION_NUMBER.search(objection.raised)
     return int(match.group(1)) if match else 0
-
 
 def priority_order(backlog: Backlog) -> tuple[Objection, ...]:
     """오래 열려 있던 반론이 먼저다. 쉬운 것만 골라 잡는 일을 막는다."""
@@ -132,7 +154,7 @@ def render_report(
     lines.append("| --- | --- |")
     lines.append(f"| 조건 수 | {metrics.conditions} |")
     lines.append(f"| 문서 분량(공백 제외) | {metrics.document_length}자 |")
-    lines.append(f"| 실질 분량(개정 제외) | {metrics.substance_length}자 |")
+    lines.append(f"| 실질 분량(개정 제외) | {metrics.substance_length}자{_delta(review, metrics)} |")
     lines.append(f"| 미해결 반론 | {metrics.open_objections} |")
     lines.append(f"| 누적 해소 반론 | {metrics.resolved_objections} |")
     lines.append(f"| 이번에 바뀐 조건 | {metrics.changed_conditions} |")
@@ -142,6 +164,16 @@ def render_report(
 
     lines.append("## 이번 반복의 변화")
     lines.append("")
+    cut = large_cut(review, metrics)
+    if cut is not None:
+        lines.append(f"> **이번 반복이 실질 분량의 {cut:.0%}를 덜어냈다.**")
+        lines.append(">")
+        lines.append(
+            "> 규칙은 이것을 막지 않는다. R13은 분량이 줄었다는 것까지만 알고, 무엇이"
+            " 남고 무엇이 사라졌는지는 판정하지 못한다. 핵심 논증이 함께 사라졌는지는"
+            " 사람이 `git diff`로 읽어야 한다. 정리는 갈아내는 일이지 지우는 일이 아니다."
+        )
+        lines.append("")
     lines.append(f"- 바뀐 조건: {', '.join(review.changed_conditions) or '없음'}")
     lines.append(f"- 해소한 반론: {', '.join(review.resolved_now) or '없음'}")
     lines.append(f"- 제기한 반론: {', '.join(review.raised_now) or '없음'}")
@@ -255,10 +287,16 @@ def render_brief(
 
     lines.append(f"- 직전 반복 결과: **{'통과' if review.ok else '위반'}**")
     lines.append(f"- 조건 {metrics.conditions}개, 미해결 반론 {metrics.open_objections}개")
-    lines.append(f"- 실질 분량 {metrics.substance_length}자")
+    lines.append(f"- 실질 분량 {metrics.substance_length}자{_delta(review, metrics)}")
     lines.append(f"- 모드: {'해소 우선 — 새 반론을 제기하지 않아도 된다' if review.resolve_first else '보통 — 해소 하나, 제기 하나'}")
     if review.consolidating:
         lines.append(f"- **정리 모드** — 예산 초과: {', '.join(review.over_budget)}")
+    cut = large_cut(review, metrics)
+    if cut is not None:
+        lines.append(
+            f"- **직전 반복이 실질 분량의 {cut:.0%}를 덜어냈다.** 이어서 더 줄이기 전에,"
+            " 사라진 것 가운데 되살려야 할 논증이 있는지 `git diff`로 먼저 확인하라."
+        )
     lines.append("")
 
     if review.consolidating:

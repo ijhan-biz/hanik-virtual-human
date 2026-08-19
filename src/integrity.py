@@ -109,6 +109,7 @@ class Review:
     changed_conditions: tuple[str, ...]
     resolve_first: bool
     over_budget: tuple[str, ...] = ()
+    previous_size: int | None = None
 
     @property
     def consolidating(self) -> bool:
@@ -509,6 +510,7 @@ def review(
         changed_conditions=changed,
         resolve_first=resolve_first,
         over_budget=over,
+        previous_size=previous_size if isinstance(previous_size, int) else None,
     )
 
 

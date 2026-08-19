@@ -23,12 +23,14 @@ from .reporting import (
     BRIEF_NAME,
     INDEX_NAME,
     Metrics,
+    large_cut,
     measure,
     render_brief,
     render_index,
     render_report,
     report_path,
 )
+from .reporting import _delta as _size_delta
 from .settlement import SETTLEMENT_NAME, render_sessions, render_settlement, settle
 from .state import LEDGER_NAME, load_ledger, load_state, save_ledger, save_state
 
@@ -128,7 +130,10 @@ def _print_summary(
         f"  조건 {metrics.conditions}개 / 미해결 반론 {metrics.open_objections}개 / "
         f"이번 해소 {metrics.resolved_now}개 / 이번 제기 {metrics.raised_now}개"
     )
-    print(f"  실질 분량 {metrics.substance_length}자")
+    print(f"  실질 분량 {metrics.substance_length}자{_size_delta(outcome, metrics)}")
+    cut = large_cut(outcome, metrics)
+    if cut is not None:
+        print(f"  대량 삭감 — 실질 분량의 {cut:.0%}가 사라졌다. git diff로 확인하라.")
     if outcome.over_budget:
         print(f"  정리 모드 — 예산 초과: {', '.join(outcome.over_budget)}")
     for result in outcome.violations:
