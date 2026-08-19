@@ -10,14 +10,35 @@ AUTO_DIR="${HANIK_AUTO_DIR:-$ROOT/.hanik-auto}"
 LOG_DIR="$AUTO_DIR/logs"
 PID_FILE="$AUTO_DIR/pid"
 STOP_FILE="$AUTO_DIR/stop"
+FINISH_FILE="$ROOT/state/finish"
 INTERVAL="${HANIK_AUTO_INTERVAL:-10}"
+# 원시 로그가 이 크기를 넘으면 한 번만 회전시킨다. 러너는 세션마다 수천 줄을
+# 쏟아내지만 남을 가치가 있는 것은 state/sessions.md와 SUMMARY.md에 추려진다.
+LOG_MAX_BYTES="${HANIK_LOG_MAX_BYTES:-2000000}"
 
 usage() {
     printf '%s\n' \
-        "사용법: $0 [run|stop|status]" \
-        "  run     수동으로 멈출 때까지 반복 실행 (기본값)" \
-        "  stop    실행 중인 러너에 종료 신호를 보냄" \
-        "  status  러너 실행 상태를 표시함"
+        "사용법: $0 [run|stop|finish|status|summary]" \
+        "  run      수동으로 멈추거나 루프가 물러날 때까지 반복 실행 (기본값)" \
+        "  stop     실행 중인 러너에 종료 신호를 보냄 (캠페인은 열어 둔 채)" \
+        "  finish   캠페인을 마감함: 러너를 멈추고 마지막 결산을 남김" \
+        "  status   러너 실행 상태와 결산 요약을 표시함" \
+        "  summary  현재 결산(SUMMARY.md)의 요점을 표시함"
+}
+
+log() {
+    printf '[%s] %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$1" >> "$LOG_DIR/runner.log"
+}
+
+rotate_log() {
+    local size
+    [ -f "$LOG_DIR/runner.log" ] || return 0
+    size="$(wc -c < "$LOG_DIR/runner.log" 2>/dev/null | tr -d ' ')"
+    [ -n "$size" ] || return 0
+    if [ "$size" -gt "$LOG_MAX_BYTES" ]; then
+        mv -f "$LOG_DIR/runner.log" "$LOG_DIR/runner.log.1"
+        log "이전 로그를 runner.log.1로 회전시켰습니다 (${size} bytes)."
+    fi
 }
 
 read_pid() {
@@ -46,18 +67,46 @@ stop_runner() {
     touch "$STOP_FILE"
 }
 
+show_summary() {
+    if [ ! -f "$ROOT/SUMMARY.md" ]; then
+        printf '아직 결산이 없습니다. `python3 -m src.hanik_loop`을 한 번 실행하세요.\n'
+        return 0
+    fi
+    awk '/^## 분량 회계/{exit} {print}' "$ROOT/SUMMARY.md"
+    printf -- '---\n전문: SUMMARY.md · 세션별 기록: state/sessions.md\n'
+}
+
+finish_campaign() {
+    mkdir -p "$AUTO_DIR" "$ROOT/state"
+    printf '%s\n' \
+        "사람이 이 캠페인을 마감했다." \
+        "이 파일이 있는 한 루프는 반복을 기록한 뒤 물러난다." \
+        "다시 열려면 이 파일을 지워라." > "$FINISH_FILE"
+    stop_runner >/dev/null 2>&1 || true
+
+    printf '캠페인을 마감합니다. 마지막 결산을 만듭니다...\n'
+    ( cd "$ROOT" && python3 -m src.hanik_loop ) || true
+    printf '\n'
+    show_summary
+}
+
 show_status() {
     local pid
     pid="$(read_pid)"
     if is_running "$pid"; then
         printf '실행 중입니다 (PID %s).\n로그: %s\n' "$pid" "$LOG_DIR/runner.log"
+    elif [ -f "$FINISH_FILE" ]; then
+        printf '마감되었습니다. 다시 열려면 %s를 지우세요.\n' "$FINISH_FILE"
     else
         printf '실행 중이 아닙니다.\n'
     fi
+    printf '\n'
+    show_summary
 }
 
 run_iteration() {
-    local before after agent_status
+    local before after agent_status verdict
+    rotate_log
     before="$(python3 -c '
 import json
 from pathlib import Path
@@ -68,7 +117,7 @@ except (FileNotFoundError, json.JSONDecodeError, OSError):
     print(0)
 ')"
 
-    printf '\n[%s] Copilot 세션 시작 (직전 반복 %s)\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$before" >> "$LOG_DIR/runner.log"
+    log "Copilot 세션 시작 (직전 반복 $before)"
     copilot \
         -C "$ROOT" \
         --prompt "$(cat <<'PROMPT'
@@ -108,9 +157,19 @@ except (FileNotFoundError, json.JSONDecodeError, OSError):
 
     # 세션이 evaluator를 실행하지 못하고 끝난 경우에만 러너가 보완한다.
     if [ "$after" -eq "$before" ]; then
-        printf '[%s] 세션이 반복을 기록하지 않아 evaluator를 보완 실행합니다.\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$LOG_DIR/runner.log"
+        log "세션이 반복을 기록하지 않아 evaluator를 보완 실행합니다."
         python3 -m src.hanik_loop >> "$LOG_DIR/runner.log" 2>&1 || true
     fi
+
+    # 세션이 스스로 루프를 돌리므로 러너는 그 종료 코드를 보지 못한다.
+    # 물러나야 하는지는 따로 묻는다.
+    verdict="$(python3 -m src.conclusion 2>&1)"
+    if python3 -m src.conclusion --quiet; then
+        return 0
+    fi
+    log "루프가 물러납니다: $verdict"
+    printf '\n%s\n' "$verdict"
+    return 3
 }
 
 command="${1:-run}"
@@ -119,8 +178,18 @@ case "$command" in
         stop_runner
         exit 0
         ;;
+    finish)
+        mkdir -p "$LOG_DIR"
+        finish_campaign
+        exit 0
+        ;;
     status)
+        mkdir -p "$LOG_DIR"
         show_status
+        exit 0
+        ;;
+    summary)
+        show_summary
         exit 0
         ;;
     run)
@@ -144,6 +213,10 @@ if is_running "$existing_pid"; then
     printf '이미 실행 중입니다 (PID %s).\n' "$existing_pid" >&2
     exit 1
 fi
+if [ -f "$FINISH_FILE" ]; then
+    printf '이 캠페인은 마감되었습니다. 다시 열려면 %s를 지우세요.\n' "$FINISH_FILE" >&2
+    exit 1
+fi
 rm -f "$STOP_FILE"
 printf '%s\n' "$$" > "$PID_FILE"
 
@@ -153,9 +226,20 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-printf '[%s] Hanik 자동 러너 시작 (PID %s, 간격 %ss)\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$$" "$INTERVAL" >> "$LOG_DIR/runner.log"
+log "Hanik 자동 러너 시작 (PID $$, 간격 ${INTERVAL}s)"
+concluded=0
 while [ ! -f "$STOP_FILE" ]; do
-    run_iteration
+    if ! run_iteration; then
+        concluded=1
+        break
+    fi
     [ "$INTERVAL" -eq 0 ] || sleep "$INTERVAL"
 done
-printf '[%s] Hanik 자동 러너 종료\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$LOG_DIR/runner.log"
+
+if [ "$concluded" -eq 1 ]; then
+    log "루프가 물러나 러너를 멈춥니다. 결산은 SUMMARY.md에 있습니다."
+    printf '\n루프가 물러났습니다. 결산:\n\n'
+    show_summary
+else
+    log "Hanik 자동 러너 종료 (사람이 멈춤)"
+fi

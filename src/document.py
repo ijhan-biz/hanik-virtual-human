@@ -64,6 +64,22 @@ class Document:
         return tuple(condition.identifier for condition in self.conditions)
 
 
+def condition_size(condition: Condition) -> int:
+    """조건의 실질 분량(공백 제외).
+
+    '개정'은 무엇을 왜 고쳤는지에 대한 기록이지 조건의 내용이 아니므로 세지
+    않는다. 개정 줄을 길게 써서 분량 예산을 채우는 일을 막는다.
+    """
+    return sum(textutil.visible_length(condition.field(name)) for name in SUBSTANCE_FIELDS)
+
+
+def document_size(document: "Document") -> int:
+    """서문과 모든 조건의 실질 분량 합계."""
+    return textutil.visible_length(document.preamble) + sum(
+        condition_size(condition) for condition in document.conditions
+    )
+
+
 def _parse_fields(body_lines: list[str], identifier: str) -> tuple[dict[str, str], list[str]]:
     """조건 본문에서 `**이름:**` 필드를 뽑아낸다."""
     fields: dict[str, str] = {}

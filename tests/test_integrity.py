@@ -1,4 +1,4 @@
-"""정직성 규칙 R1–R11 테스트.
+"""정직성 규칙 R1–R14 테스트.
 
 각 규칙마다 통과하는 경우와 위반하는 경우를 모두 확인한다. 규칙이 조용히 무력해지면
 이 저장소는 전신과 같은 방식으로 실패하므로, 위반 경로를 확인하는 쪽이 더 중요하다.
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from conftest import build_repository, condition_block, document_text, objection_text
+from conftest import build_repository, condition_block, document_text, filler, objection_text
 from src.document import parse_document
 from src.integrity import RuleResult, Review, evidence_signature, review, snapshot
 from src.objections import parse_backlog
@@ -342,7 +342,14 @@ def test_은퇴시킨_반론의_대상_조건은_없앨_수_있다(tmp_path: Pat
     previous = _accepted(tmp_path)
 
     (tmp_path / "Hanik.md").write_text(
-        document_text([condition_block("C-001", "체현", grounds="C-002를 흡수해 다시 쓴다. " * 25)]),
+        document_text([
+            condition_block(
+                "C-001",
+                "체현",
+                grounds="C-002를 흡수해 다시 쓴다. " * 25,
+                revision="반복 0002에서 O-0001을 은퇴시키며 C-002를 흡수했다.",
+            )
+        ]),
         encoding="utf-8",
     )
     (tmp_path / "objections" / "O-0001.md").write_text(
@@ -391,3 +398,113 @@ def test_R5_문서_반론은_조건_하나_변경에_딸려_해소되지_않는�
     outcome = _review(tmp_path, previous)
     assert not _rule(outcome, "R5").passed
     assert "딸려 해소될 수는 없다" in _rule(outcome, "R5").evidence
+
+
+def _budgeted(monkeypatch, condition: int = 300, preamble: int = 4000) -> None:
+    monkeypatch.setenv("HANIK_CONDITION_BUDGET", str(condition))
+    monkeypatch.setenv("HANIK_PREAMBLE_BUDGET", str(preamble))
+
+
+def test_R13_예산_안이면_통과한다(repository: Path, monkeypatch) -> None:
+    _budgeted(monkeypatch, condition=20000)
+    outcome = _review(repository, _accepted(repository))
+    assert _rule(outcome, "R13").passed
+    assert not outcome.over_budget
+    assert not outcome.consolidating
+
+
+def test_R13_예산을_넘겼는데_늘어나면_위반이다(repository: Path, monkeypatch) -> None:
+    _budgeted(monkeypatch)
+    previous = _accepted(repository)
+    (repository / "Hanik.md").write_text(
+        document_text([condition_block(grounds=filler("C-001 근거", 900))]), encoding="utf-8"
+    )
+    outcome = _review(repository, previous)
+    assert not _rule(outcome, "R13").passed
+    assert outcome.consolidating
+    assert "C-001" in _rule(outcome, "R13").evidence
+
+
+def test_R13_예산을_넘겨도_줄어들면_통과한다(repository: Path, monkeypatch) -> None:
+    _budgeted(monkeypatch)
+    (repository / "Hanik.md").write_text(
+        document_text([condition_block(grounds=filler("C-001 근거", 900))]), encoding="utf-8"
+    )
+    previous = _accepted(repository)
+    (repository / "Hanik.md").write_text(
+        document_text([condition_block(grounds=filler("C-001 근거", 320))]), encoding="utf-8"
+    )
+    outcome = _review(repository, previous)
+    assert _rule(outcome, "R13").passed
+    assert outcome.consolidating, "여전히 예산은 넘지만 줄었으므로 통과한다"
+    assert "줄었다" in _rule(outcome, "R13").evidence
+
+
+def test_R13_첫_반복은_면제된다(repository: Path, monkeypatch) -> None:
+    _budgeted(monkeypatch, condition=10)
+    outcome = _review(repository, State())
+    assert _rule(outcome, "R13").exempt
+
+
+def test_R14_조건이_자취_없이_사라지면_위반이다(tmp_path: Path) -> None:
+    build_repository(
+        tmp_path,
+        conditions=[condition_block("C-001", "체현"), condition_block("C-002", "유한성")],
+        objections=[objection_text("O-0001", target="C-001")],
+    )
+    previous = _accepted(tmp_path)
+    (tmp_path / "Hanik.md").write_text(
+        document_text([condition_block("C-001", "체현", claim="다시 쓴 주장이다. " * 12)]),
+        encoding="utf-8",
+    )
+    outcome = _review(tmp_path, previous)
+    assert not _rule(outcome, "R14").passed
+    assert "C-002" in _rule(outcome, "R14").evidence
+
+
+def test_R14_개정에_자취를_남기면_조건을_합칠_수_있다(tmp_path: Path) -> None:
+    build_repository(
+        tmp_path,
+        conditions=[condition_block("C-001", "체현"), condition_block("C-002", "유한성")],
+        objections=[objection_text("O-0001", target="C-001")],
+    )
+    previous = _accepted(tmp_path)
+    (tmp_path / "Hanik.md").write_text(
+        document_text([
+            condition_block(
+                "C-001",
+                "체현",
+                claim="다시 쓴 주장이다. " * 12,
+                revision="반복 0002에서 C-002를 흡수했다.",
+            )
+        ]),
+        encoding="utf-8",
+    )
+    outcome = _review(tmp_path, previous)
+    assert _rule(outcome, "R14").passed
+    assert "C-002 → C-001" in _rule(outcome, "R14").evidence
+
+
+def test_R14_분량을_맞추려_조건을_지우는_길을_막는다(tmp_path: Path, monkeypatch) -> None:
+    """R13이 여는 구멍을 R14가 닫는지 확인한다.
+
+    조건을 통째로 지우면 분량은 확실히 줄어 R13은 통과한다. 그것만으로 정리가
+    되어버리면 R13은 삭제 유인이 된다.
+    """
+    _budgeted(monkeypatch)
+    build_repository(
+        tmp_path,
+        conditions=[
+            condition_block("C-001", "체현", grounds=filler("C-001 근거", 900)),
+            condition_block("C-002", "유한성", grounds=filler("C-002 근거", 900)),
+        ],
+        objections=[objection_text("O-0001", target="C-001")],
+    )
+    previous = _accepted(tmp_path)
+    (tmp_path / "Hanik.md").write_text(
+        document_text([condition_block("C-001", "체현", grounds=filler("C-001 근거", 900))]),
+        encoding="utf-8",
+    )
+    outcome = _review(tmp_path, previous)
+    assert _rule(outcome, "R13").passed, "지웠으니 분량은 줄었다"
+    assert not _rule(outcome, "R14").passed, "그러나 삭제는 정리가 아니다"

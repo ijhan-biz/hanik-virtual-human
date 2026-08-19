@@ -15,8 +15,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import text as textutil
-from .document import REQUIRED_FIELDS, Document
-from .integrity import Review
+from .conclusion import CONTINUE, Conclusion
+from .document import REQUIRED_FIELDS, Document, condition_size, document_size
+from .integrity import Review, condition_budget
 from .objections import Backlog, Objection
 
 REPORT_PREFIX = "iteration-"
@@ -32,6 +33,7 @@ class Metrics:
 
     conditions: int
     document_length: int
+    substance_length: int
     open_objections: int
     resolved_objections: int
     changed_conditions: int
@@ -48,6 +50,7 @@ def measure(document: Document, backlog: Backlog, review: Review) -> Metrics:
     return Metrics(
         conditions=len(document.conditions),
         document_length=length,
+        substance_length=document_size(document),
         open_objections=len(backlog.open_items),
         resolved_objections=len(backlog.resolved_items),
         changed_conditions=len(review.changed_conditions),
@@ -92,15 +95,27 @@ def render_report(
     review: Review,
     metrics: Metrics,
     state_notes: list[str],
+    verdict: Conclusion | None = None,
 ) -> str:
     lines: list[str] = []
-    verdict = "통과" if review.ok else "위반"
+    result_word = "통과" if review.ok else "위반"
     lines.append(f"# 반복 {iteration:04d}")
     lines.append("")
     lines.append(f"- 시각: {_timestamp()}")
-    lines.append(f"- 결과: **{verdict}**")
+    lines.append(f"- 결과: **{result_word}**")
     lines.append(f"- 증거 서명: `{review.signature[:16]}`")
+    if verdict is not None and verdict.state != CONTINUE:
+        lines.append(f"- 마침: **{verdict.state}** — {verdict.reason}")
     lines.append("")
+
+    if verdict is not None and verdict.state != CONTINUE:
+        lines.append(f"## 루프가 물러난다 — {verdict.state}")
+        lines.append("")
+        lines.append(verdict.reason)
+        lines.append("")
+        if verdict.guidance:
+            lines.append(verdict.guidance)
+            lines.append("")
 
     if state_notes:
         lines.append("## 상태 복구")
@@ -117,6 +132,7 @@ def render_report(
     lines.append("| --- | --- |")
     lines.append(f"| 조건 수 | {metrics.conditions} |")
     lines.append(f"| 문서 분량(공백 제외) | {metrics.document_length}자 |")
+    lines.append(f"| 실질 분량(개정 제외) | {metrics.substance_length}자 |")
     lines.append(f"| 미해결 반론 | {metrics.open_objections} |")
     lines.append(f"| 누적 해소 반론 | {metrics.resolved_objections} |")
     lines.append(f"| 이번에 바뀐 조건 | {metrics.changed_conditions} |")
@@ -133,6 +149,11 @@ def render_report(
         lines.append(f"- 은퇴시킨 반론: {', '.join(review.superseded_now)} (해소로 세지 않는다)")
     if review.resolve_first:
         lines.append("- 미해결 반론이 상한에 이르러 **해소 우선** 모드다. 새 반론 제기 의무가 면제된다.")
+    if review.consolidating:
+        lines.append(
+            f"- 예산을 넘긴 구획이 있어 **정리 모드**다: {', '.join(review.over_budget)}. "
+            "문서가 줄어야 R13을 통과한다."
+        )
     lines.append("")
 
     lines.append("## 정직성 규칙")
@@ -146,12 +167,16 @@ def render_report(
 
     lines.append("## 조건")
     lines.append("")
-    lines.append("| 조건 | 제목 | 분량 | 개정 |")
-    lines.append("| --- | --- | --- | --- |")
+    lines.append("| 조건 | 제목 | 실질 분량 | 예산 | 개정 |")
+    lines.append("| --- | --- | --- | --- | --- |")
+    budget = condition_budget()
     for condition in document.conditions:
-        size = sum(textutil.visible_length(condition.field(name)) for name in REQUIRED_FIELDS)
+        size = condition_size(condition)
         revision = " ".join(condition.field("개정").split()).replace("|", "\\|")
-        lines.append(f"| {condition.identifier} | {condition.title} | {size}자 | {revision} |")
+        state = "초과" if size > budget else "이내"
+        lines.append(
+            f"| {condition.identifier} | {condition.title} | {size}자 | {state} | {revision} |"
+        )
     lines.append("")
 
     lines.append("## 미해결 반론")
@@ -205,6 +230,7 @@ def render_brief(
     backlog: Backlog,
     review: Review,
     metrics: Metrics,
+    verdict: Conclusion | None = None,
 ) -> str:
     ordered = priority_order(backlog)
     lines: list[str] = []
@@ -212,10 +238,54 @@ def render_brief(
     lines.append("")
     lines.append(f"반복 {iteration:04d}이 {_timestamp()}에 생성했다.")
     lines.append("")
+
+    if verdict is not None and verdict.state != CONTINUE:
+        lines.append(f"## 루프가 물러났다 — {verdict.state}")
+        lines.append("")
+        lines.append(verdict.reason)
+        lines.append("")
+        if verdict.guidance:
+            lines.append(verdict.guidance)
+            lines.append("")
+        lines.append(
+            "**세션을 새로 시작하지 마라.** 사람이 `SUMMARY.md`와 마지막 보고서를 "
+            "읽고 판단할 차례다."
+        )
+        lines.append("")
+
     lines.append(f"- 직전 반복 결과: **{'통과' if review.ok else '위반'}**")
     lines.append(f"- 조건 {metrics.conditions}개, 미해결 반론 {metrics.open_objections}개")
+    lines.append(f"- 실질 분량 {metrics.substance_length}자")
     lines.append(f"- 모드: {'해소 우선 — 새 반론을 제기하지 않아도 된다' if review.resolve_first else '보통 — 해소 하나, 제기 하나'}")
+    if review.consolidating:
+        lines.append(f"- **정리 모드** — 예산 초과: {', '.join(review.over_budget)}")
     lines.append("")
+
+    if review.consolidating:
+        lines.append("## 먼저: 정리한다")
+        lines.append("")
+        lines.append(
+            "예산을 넘긴 구획이 있다. 이번 반복은 문서가 **줄어들어야** R13을 통과한다. "
+            "덧붙이는 방식으로는 통과할 수 없다."
+        )
+        lines.append("")
+        for item in review.over_budget:
+            lines.append(f"- {item}")
+        lines.append("")
+        lines.append("정리는 삭제가 아니다. 다음 순서로 한다.")
+        lines.append("")
+        lines.append("1. 같은 말을 다르게 반복한 문단을 하나로 합친다.")
+        lines.append("2. 예시가 여러 개면 가장 강한 것 하나만 남긴다.")
+        lines.append("3. 이미 해소된 반론에 답하느라 늘어난 방어 문장을, 그 답이")
+        lines.append("   주장에 흡수되었으면 지운다. 답은 남고 변명은 지운다.")
+        lines.append("4. 조건을 통째로 지워 분량을 맞추지 마라. R14가 잡는다.")
+        lines.append("5. R2의 최소 분량 아래로 깎지 마라. R2가 잡는다.")
+        lines.append("")
+        lines.append(
+            "정리로 대상 조건의 실질이 바뀌면 그것으로 R5도 만족된다. 줄이면서 "
+            "반론을 해소할 수 있다."
+        )
+        lines.append("")
 
     if review.violations:
         lines.append("## 먼저 고칠 것")
@@ -268,6 +338,9 @@ def render_brief(
     lines.append("  `superseded`로 은퇴시키고 비판을 넘겨받을 반론을 `해소`에 적어라. 은퇴는 해소로 세지 않는다.")
     lines.append("- **규칙을 고쳐 통과시키지 마라.** `src/integrity.py`를 무르게 만드는 것은 루프가 잡지 못한다.")
     lines.append("  사람 리뷰만이 막을 수 있고, 그래서 이것이 여기 적혀 있다.")
+    lines.append("- **예산을 늘려 정리를 피하지 마라.** `HANIK_CONDITION_BUDGET`을 올리는 것은")
+    lines.append("  R13을 무르게 만드는 것과 같다. 읽을 수 없는 문서는 쓰이지 않은 문서다.")
+    lines.append("- `SUMMARY.md`와 `state/sessions.md`는 생성물이다. 손으로 고치지 마라.")
     lines.append("- 전체 계약은 `AGENTS.md`에 있다.")
     lines.append("")
     return "\n".join(lines)

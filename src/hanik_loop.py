@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .document import parse_document
+from .conclusion import CONTINUE, Conclusion, assess
 from .integrity import Review, repository_paths, review, snapshot
 from .objections import parse_backlog
 from .reporting import (
@@ -28,7 +29,10 @@ from .reporting import (
     render_report,
     report_path,
 )
+from .settlement import SETTLEMENT_NAME, render_sessions, render_settlement, settle
 from .state import LEDGER_NAME, load_ledger, load_state, save_ledger, save_state
+
+SESSIONS_NAME = "sessions.md"
 
 
 def repository_root() -> Path:
@@ -36,12 +40,16 @@ def repository_root() -> Path:
 
 
 def run(root: Path | None = None) -> int:
-    """반복 하나를 수행하고 종료 코드를 돌려준다."""
+    """반복 하나를 수행하고 종료 코드를 돌려준다.
+
+    0은 통과, 1은 위반, 3은 루프가 물러나야 함(정체 또는 마감)이다.
+    """
     root = repository_root() if root is None else root
     document_path, objections_dir, state_path, reports_dir = repository_paths(root)
+    state_dir = state_path.parent
 
     state, notes = load_state(state_path)
-    ledger = load_ledger(state_path.parent / LEDGER_NAME)
+    ledger = load_ledger(state_dir / LEDGER_NAME)
 
     document = parse_document(document_path)
     backlog = parse_backlog(objections_dir)
@@ -49,10 +57,6 @@ def run(root: Path | None = None) -> int:
 
     iteration = state.iteration + 1
     metrics = measure(document, backlog, outcome)
-
-    reports_dir.mkdir(parents=True, exist_ok=True)
-    report = render_report(iteration, document, backlog, outcome, metrics, notes)
-    report_path(reports_dir, iteration).write_text(report, encoding="utf-8")
 
     entry = {
         "iteration": iteration,
@@ -64,9 +68,24 @@ def run(root: Path | None = None) -> int:
         "resolved_now": metrics.resolved_now,
         "raised_now": metrics.raised_now,
         "violations": [result.identifier for result in outcome.violations],
+        "resolved_ids": list(outcome.resolved_now),
+        "raised_ids": list(outcome.raised_now),
+        "superseded_ids": list(outcome.superseded_now),
+        "changed_ids": list(outcome.changed_conditions),
+        "size": metrics.substance_length,
+        "over_budget": list(outcome.over_budget),
     }
     state.history.append(entry)
     ledger.append(entry)
+
+    settlement = settle(document, backlog, iteration, ledger)
+    verdict = assess(ledger, state_dir)
+
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    report = render_report(
+        iteration, document, backlog, outcome, metrics, notes, verdict
+    )
+    report_path(reports_dir, iteration).write_text(report, encoding="utf-8")
 
     state.iteration = iteration
     if outcome.ok:
@@ -77,18 +96,31 @@ def run(root: Path | None = None) -> int:
         state.signature = outcome.signature
 
     save_state(state_path, state)
-    save_ledger(state_path.parent / LEDGER_NAME, ledger)
+    save_ledger(state_dir / LEDGER_NAME, ledger)
     (reports_dir / INDEX_NAME).write_text(render_index(ledger), encoding="utf-8")
-    (state_path.parent / BRIEF_NAME).write_text(
-        render_brief(iteration, document, backlog, outcome, metrics), encoding="utf-8"
+    (state_dir / BRIEF_NAME).write_text(
+        render_brief(iteration, document, backlog, outcome, metrics, verdict),
+        encoding="utf-8",
     )
 
-    _print_summary(root, iteration, outcome, metrics, reports_dir)
+    # 결산은 통과 여부와 무관하게 갱신한다. 위반한 반복의 결과물도 결과물이고,
+    # 무엇이 잘못된 채로 남았는지 읽을 수 있어야 한다.
+    (root / SETTLEMENT_NAME).write_text(render_settlement(settlement), encoding="utf-8")
+    (state_dir / SESSIONS_NAME).write_text(render_sessions(ledger), encoding="utf-8")
+
+    _print_summary(root, iteration, outcome, metrics, reports_dir, verdict)
+    if verdict.should_stop:
+        return verdict.exit_code
     return 0 if outcome.ok else 1
 
 
 def _print_summary(
-    root: Path, iteration: int, outcome: Review, metrics: Metrics, reports_dir: Path
+    root: Path,
+    iteration: int,
+    outcome: Review,
+    metrics: Metrics,
+    reports_dir: Path,
+    verdict: Conclusion,
 ) -> None:
     relative = report_path(reports_dir, iteration).relative_to(root)
     print(f"반복 {iteration:04d} — {'통과' if outcome.ok else '위반'}")
@@ -96,12 +128,20 @@ def _print_summary(
         f"  조건 {metrics.conditions}개 / 미해결 반론 {metrics.open_objections}개 / "
         f"이번 해소 {metrics.resolved_now}개 / 이번 제기 {metrics.raised_now}개"
     )
+    print(f"  실질 분량 {metrics.substance_length}자")
+    if outcome.over_budget:
+        print(f"  정리 모드 — 예산 초과: {', '.join(outcome.over_budget)}")
     for result in outcome.violations:
         print(f"  [{result.identifier}] {result.title} — {result.evidence}")
     print(f"  보고서: {relative}")
     print("  브리프: state/next-session.md")
+    print(f"  결산: {SETTLEMENT_NAME}")
     if not outcome.ok:
         print("  스냅샷을 갱신하지 않았다. 위반을 고칠 때까지 기준은 그대로다.")
+    if verdict.state != CONTINUE:
+        print(f"  ** {verdict.state} ** {verdict.reason}")
+        if verdict.guidance:
+            print(f"  {verdict.guidance}")
 
 
 def main(argv: list[str] | None = None) -> int:

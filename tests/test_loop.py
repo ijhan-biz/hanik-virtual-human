@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 from conftest import build_repository, condition_block, document_text, objection_text
+from src.conclusion import EXIT_CONCLUDED, FINISH_MARKER
 from src.hanik_loop import run
 from src.state import load_state
 
@@ -161,3 +162,72 @@ def test_미해결_반론이_비면_새_반론을_요구한다(repository: Path)
     assert run(repository) == 1
     brief = (repository / "state" / "next-session.md").read_text(encoding="utf-8")
     assert "비판이 멈춘 상태" in brief
+
+
+def test_반복은_결산과_세션_기록을_남긴다(repository: Path) -> None:
+    assert run(repository) == 0
+
+    settlement = (repository / "SUMMARY.md").read_text(encoding="utf-8")
+    assert "지금 Hanik의 입장" in settlement
+    assert "C-001" in settlement
+    assert "분량 회계" in settlement
+    assert "생성물이다" in settlement
+
+    sessions = (repository / "state" / "sessions.md").read_text(encoding="utf-8")
+    assert "반복 0001" in sessions
+
+
+def test_결산은_위반한_반복에서도_갱신된다(repository: Path) -> None:
+    """어긴 반복의 결과물도 결과물이다. 무엇이 잘못된 채인지 읽을 수 있어야 한다."""
+    run(repository)
+    (repository / "SUMMARY.md").unlink()
+    assert run(repository) == 1
+    assert (repository / "SUMMARY.md").is_file()
+
+
+def test_원장은_해소와_제기의_번호를_남긴다(repository: Path) -> None:
+    run(repository)
+    _honest_resolution(repository, 2)
+    run(repository)
+
+    ledger = json.loads((repository / "state" / "ledger.json").read_text(encoding="utf-8"))
+    assert ledger[1]["resolved_ids"] == ["O-0001"]
+    assert ledger[1]["raised_ids"] == ["O-0002"]
+    assert ledger[1]["changed_ids"] == ["C-001"]
+    assert isinstance(ledger[1]["size"], int)
+
+
+def test_같은_증거가_되풀이되면_루프가_물러난다(repository: Path, monkeypatch) -> None:
+    monkeypatch.setenv("HANIK_STAGNATION_LIMIT", "3")
+    assert run(repository) == 0
+    assert run(repository) == 1
+    assert run(repository) == EXIT_CONCLUDED
+
+    brief = (repository / "state" / "next-session.md").read_text(encoding="utf-8")
+    assert "루프가 물러났다 — 정체" in brief
+    assert "세션을 새로 시작하지 마라" in brief
+
+    report = (repository / "reports" / "iteration-0003.md").read_text(encoding="utf-8")
+    assert "정체" in report
+
+
+def test_마감_표시가_있으면_통과해도_물러난다(repository: Path) -> None:
+    (repository / "state").mkdir(exist_ok=True)
+    (repository / "state" / FINISH_MARKER).write_text("", encoding="utf-8")
+    assert run(repository) == EXIT_CONCLUDED
+
+    brief = (repository / "state" / "next-session.md").read_text(encoding="utf-8")
+    assert "루프가 물러났다 — 마감" in brief
+    assert (repository / "SUMMARY.md").is_file(), "마감에도 마지막 결산은 남는다"
+
+
+def test_정리_모드는_브리프에_줄이는_법을_적는다(repository: Path, monkeypatch) -> None:
+    monkeypatch.setenv("HANIK_CONDITION_BUDGET", "300")
+    run(repository)
+    _honest_resolution(repository, 2)
+    run(repository)
+
+    brief = (repository / "state" / "next-session.md").read_text(encoding="utf-8")
+    assert "정리 모드" in brief
+    assert "먼저: 정리한다" in brief
+    assert "조건을 통째로 지워 분량을 맞추지 마라" in brief

@@ -43,7 +43,7 @@ class State:
     version: int = SCHEMA_VERSION
     iteration: int = 0
     updated_at: str = ""
-    document: dict[str, str] = field(default_factory=dict)
+    document: dict[str, Any] = field(default_factory=dict)
     conditions: dict[str, dict[str, str]] = field(default_factory=dict)
     objections: dict[str, dict[str, str]] = field(default_factory=dict)
     signature: str = ""

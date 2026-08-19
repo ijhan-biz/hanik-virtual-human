@@ -8,9 +8,14 @@
 - 반론을 무르게 고쳐서 해소한 것은 아닌가 (R6)
 - 비판이 멈추지 않았는가 (R7, R8)
 - 형식과 분량이 최소한을 넘는가 (R1, R2, R9, R10)
+- 결과물이 아직 읽을 수 있는 크기인가 (R13, R14)
 
 이전 저장소는 "검사를 약화시키지 말라"를 탐지 불가능한 규범으로 남겨두었다.
 R6은 그 자리에 기계적으로 탐지 가능한 장치를 놓는다.
+
+R1–R12는 전부 한 방향으로만 민다: 무언가 더해지기를 요구한다. 그 상태로 오래
+돌리면 문서는 아무도 읽지 않는 크기가 된다. R13은 반대 방향의 유일한 압력이고,
+R14는 R13이 여는 구멍—분량을 줄이려고 조건을 통째로 지우는 길—을 막는다.
 """
 
 from __future__ import annotations
@@ -18,9 +23,10 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from . import text as textutil
-from .document import REQUIRED_FIELDS, Document
+from .document import REQUIRED_FIELDS, Document, condition_size, document_size
 from .objections import Backlog, Objection
 from .state import State
 
@@ -37,6 +43,16 @@ MAX_DUPLICATION = 0.15
 #: 미해결 반론이 이만큼 쌓이면 새 반론 제기 의무(R7)를 면제하고 해소를 우선한다.
 DEFAULT_OPEN_LIMIT = 12
 
+#: 조건 하나가 실질(주장·근거·한계)로 가질 수 있는 글자 수 상한.
+#: 품질 기준이 아니라 사람이 읽어낼 수 있는 크기의 상한이다. R2의 최소 분량
+#: 합계(480자)의 열 배를 넘게 잡았으므로, 이 선에 닿는 조건은 이미 한 번
+#: 추려낼 때가 된 것이다.
+DEFAULT_CONDITION_BUDGET = 6000
+
+#: 서문이 가질 수 있는 글자 수 상한. 서문은 조건이 아니므로 R2도 R10도 보지
+#: 않는다. 예산이 없으면 분량이 가장 먼저 흘러드는 자리가 여기다.
+DEFAULT_PREAMBLE_BUDGET = 4000
+
 
 def open_limit(environ: dict[str, str] | None = None) -> int:
     source = os.environ if environ is None else environ
@@ -45,6 +61,23 @@ def open_limit(environ: dict[str, str] | None = None) -> int:
     except (TypeError, ValueError):
         return DEFAULT_OPEN_LIMIT
     return value if value > 0 else DEFAULT_OPEN_LIMIT
+
+
+def _budget(name: str, fallback: int, environ: dict[str, str] | None = None) -> int:
+    source = os.environ if environ is None else environ
+    try:
+        value = int(source.get(name, fallback))
+    except (TypeError, ValueError):
+        return fallback
+    return value if value > 0 else fallback
+
+
+def condition_budget(environ: dict[str, str] | None = None) -> int:
+    return _budget("HANIK_CONDITION_BUDGET", DEFAULT_CONDITION_BUDGET, environ)
+
+
+def preamble_budget(environ: dict[str, str] | None = None) -> int:
+    return _budget("HANIK_PREAMBLE_BUDGET", DEFAULT_PREAMBLE_BUDGET, environ)
 
 
 @dataclass(frozen=True)
@@ -75,6 +108,12 @@ class Review:
     superseded_now: tuple[str, ...]
     changed_conditions: tuple[str, ...]
     resolve_first: bool
+    over_budget: tuple[str, ...] = ()
+
+    @property
+    def consolidating(self) -> bool:
+        """정리 모드인가. 예산을 넘긴 구획이 있으면 문서는 줄어야 한다."""
+        return bool(self.over_budget)
 
     @property
     def ok(self) -> bool:
@@ -193,6 +232,27 @@ def _duplication(document: Document) -> tuple[float, str]:
                 worst = ratio
                 detail = f"{left}와 {right}가 문장 {len(shared)}개를 공유한다(비율 {ratio:.2f})."
     return worst, detail
+
+
+def _over_budget(document: Document, condition_bound: int, preamble_bound: int) -> tuple[str, ...]:
+    """예산을 넘긴 구획의 이름과 초과량."""
+    over: list[str] = []
+    preamble_length = textutil.visible_length(document.preamble)
+    if preamble_length > preamble_bound:
+        over.append(f"서문 {preamble_length}자 > {preamble_bound}자")
+    for condition in document.conditions:
+        size = condition_size(condition)
+        if size > condition_bound:
+            over.append(f"{condition.identifier} {size}자 > {condition_bound}자")
+    return tuple(over)
+
+
+def _absorbed_by(identifier: str, document: Document) -> str | None:
+    """사라진 조건을 흡수했다고 밝힌 조건을 찾는다."""
+    for condition in document.conditions:
+        if identifier in condition.field("개정"):
+            return condition.identifier
+    return None
 
 
 def review(
@@ -387,6 +447,59 @@ def review(
         exempt=True,
     )
 
+    # R13
+    condition_bound = condition_budget()
+    preamble_bound = preamble_budget()
+    over = _over_budget(document, condition_bound, preamble_bound)
+    current_size = document_size(document)
+    previous_size = previous.document.get("length")
+    if not over:
+        r13_ok = True
+        r13_evidence = (
+            f"모든 구획이 예산 안에 있다(합계 {current_size}자, 조건 상한 "
+            f"{condition_bound}자, 서문 상한 {preamble_bound}자)."
+        )
+    elif not isinstance(previous_size, int):
+        r13_ok = True
+        r13_evidence = f"예산을 넘긴 구획이 있으나 비교할 직전 분량이 없다: {', '.join(over)}."
+    elif current_size < previous_size:
+        r13_ok = True
+        r13_evidence = (
+            f"정리 모드다. 분량이 {previous_size}자에서 {current_size}자로 "
+            f"{previous_size - current_size}자 줄었다. 남은 초과: {', '.join(over)}."
+        )
+    else:
+        r13_ok = False
+        r13_evidence = (
+            f"예산을 넘긴 구획이 있는데 문서가 줄지 않았다({previous_size}자 → "
+            f"{current_size}자). 초과: {', '.join(over)}. 새 문장을 더하기 전에 "
+            "덜어내라. 읽히지 않는 문서는 쓰이지 않은 문서와 같다."
+        )
+    add("R13", "예산을 넘긴 구획이 있으면 문서가 줄어든다", r13_ok, r13_evidence, exempt=True)
+
+    # R14
+    vanished = [
+        identifier
+        for identifier in sorted(previous.conditions)
+        if document.by_id(identifier) is None
+    ]
+    unexplained = [
+        identifier for identifier in vanished if _absorbed_by(identifier, document) is None
+    ]
+    if unexplained:
+        r14_evidence = (
+            f"사라진 조건: {', '.join(unexplained)}. 조건은 조용히 지울 수 없다. "
+            "R13을 분량으로 통과하려고 조건을 통째로 없애는 것은 정리가 아니라 "
+            "삭제다. 정말 합쳐야 한다면 흡수한 조건의 '개정'에 사라진 번호를 "
+            "적어 자취를 남겨라."
+        )
+    elif vanished:
+        traces = [f"{i} → {_absorbed_by(i, document)}" for i in vanished]
+        r14_evidence = f"조건이 흡수되었고 자취가 남아 있다: {', '.join(traces)}."
+    else:
+        r14_evidence = f"이전 조건 {len(previous.conditions)}개가 모두 남아 있다."
+    add("R14", "조건이 자취 없이 사라지지 않았다", not unexplained, r14_evidence, exempt=True)
+
     return Review(
         results=tuple(results),
         signature=signature,
@@ -395,12 +508,17 @@ def review(
         superseded_now=moves["superseded"],
         changed_conditions=changed,
         resolve_first=resolve_first,
+        over_budget=over,
     )
 
 
-def snapshot(document: Document, backlog: Backlog) -> tuple[dict[str, str], dict[str, dict[str, str]], dict[str, dict[str, str]]]:
+def snapshot(document: Document, backlog: Backlog) -> tuple[dict[str, Any], dict[str, dict[str, str]], dict[str, dict[str, str]]]:
     """다음 반복이 비교에 쓸 스냅샷을 만든다."""
-    document_snapshot = {"digest": document.digest, "preamble_digest": document.preamble_digest}
+    document_snapshot: dict[str, Any] = {
+        "digest": document.digest,
+        "preamble_digest": document.preamble_digest,
+        "length": document_size(document),
+    }
     conditions = {
         c.identifier: {"digest": c.digest, "substance_digest": c.substance_digest}
         for c in document.conditions
