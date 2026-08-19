@@ -8146,5 +8146,122 @@
       "C-001 27551자 > 6000자",
       "C-002 44332자 > 6000자"
     ]
+  },
+  {
+    "iteration": 613,
+    "at": "2026-08-19T15:05:51+00:00",
+    "signature": "62c62f92932df92a6cd030cdbc97728d6066241960179d0e587cb8bf1158ee5e",
+    "ok": true,
+    "conditions": 3,
+    "open": 1,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0167"
+    ],
+    "raised_ids": [
+      "O-0168"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-001",
+      "C-002",
+      "C-003"
+    ],
+    "size": 2547,
+    "over_budget": []
+  },
+  {
+    "iteration": 614,
+    "at": "2026-08-19T15:07:31+00:00",
+    "signature": "66d77b881b55846d2afc48c1f463476e24590887a2b36a4f4f8fae8352136493",
+    "ok": true,
+    "conditions": 3,
+    "open": 1,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0168"
+    ],
+    "raised_ids": [
+      "O-0169"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 2840,
+    "over_budget": []
+  },
+  {
+    "iteration": 615,
+    "at": "2026-08-19T15:08:36+00:00",
+    "signature": "9737d6554325e52b22d89820193af2c195d383ae6783ef83b0af90f691946b32",
+    "ok": true,
+    "conditions": 3,
+    "open": 1,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0169"
+    ],
+    "raised_ids": [
+      "O-0170"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 2946,
+    "over_budget": []
+  },
+  {
+    "iteration": 616,
+    "at": "2026-08-19T15:10:25+00:00",
+    "signature": "8b1c1ff26c122d4b2a59b6525b70b9fd6a69436d2a3674ff156d1cc909ccf151",
+    "ok": true,
+    "conditions": 3,
+    "open": 1,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0170"
+    ],
+    "raised_ids": [
+      "O-0171"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 3188,
+    "over_budget": []
+  },
+  {
+    "iteration": 617,
+    "at": "2026-08-19T15:11:56+00:00",
+    "signature": "4784b9f0478aec77aaa9f911fbc1ae7a4bfd10838dc94148f0f69b1e856f6029",
+    "ok": true,
+    "conditions": 3,
+    "open": 1,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0171"
+    ],
+    "raised_ids": [
+      "O-0172"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 3645,
+    "over_budget": []
   }
 ]

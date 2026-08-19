@@ -1,23 +1,24 @@
 {
   "version": 1,
-  "iteration": 612,
-  "updated_at": "2026-08-19T14:58:31+00:00",
+  "iteration": 617,
+  "updated_at": "2026-08-19T15:11:56+00:00",
   "document": {
-    "digest": "fb5be53ebe90d4b14186f2d34fcae71bbe8a16af41b9ebbed40eab0f08781f36",
-    "preamble_digest": "ed894620d0aafa6e48e76a4b2a06a0939d38916ca7e2359443a22c5f6ee3d2d3"
+    "digest": "429b8e93c5a4137609ed078f24db662eb5356a2a59da5a2b1e248a9810585fae",
+    "preamble_digest": "3dbf8d9c085eb38f34e16ab0bb3c893386349e53ea84e33c2561a0c861484458",
+    "length": 3645
   },
   "conditions": {
     "C-001": {
-      "digest": "49d612945f7be78724c90f3b4be8c5719a9449c68b6b2f79ff2465f53bd16614",
-      "substance_digest": "5ea0d3bb255612c221eaa6fe4e86cb6365b507b5e57827060ed58b63d3abb6ca"
+      "digest": "ce481fc884df1e31e35861ad418d093477b99cc361ce9d0a6ef816c172a6a195",
+      "substance_digest": "6f31107e51f8047854a44264235c3dcaa6cfdc85a7bbb7ab773d4587045c839f"
     },
     "C-002": {
-      "digest": "6fa5e2b0a28f0ab536c52ccf59a1fb09f8b25ba24c81a53488fcdb16f1854163",
-      "substance_digest": "352dc068db2aa849c48adbf15b4f0385686a857da02558bfb741f449e0037479"
+      "digest": "0b5baf179d5291f7e7e169a166fd4286e36a5c4003a8dca2a6f44e851ebf5b92",
+      "substance_digest": "8c8b339edc693f68a45a2d3ce5391a6e0507d01f71af8ca5980f670e2753bc1f"
     },
     "C-003": {
-      "digest": "35f8538aa4acc718b30e37b23cb3ff3ec07bd2e9caf791d85b67a0e1ad7a064b",
-      "substance_digest": "4e5e4f09613718dee27dbd049a85452dbeab76ef35bf3f3538b2e6c67afc9961"
+      "digest": "46d1cb3ceecdd23e116bfd1c2beb31ed5e8cc9d20690abb05ac4720e90a734b0",
+      "substance_digest": "62fa4606650fdb94b8467c6d1dc794ab0279a6e777c7d9e08aff4b8ebd95fb81"
     }
   },
   "objections": {
@@ -852,68 +853,38 @@
       "target": "문서"
     },
     "O-0167": {
-      "status": "open",
+      "status": "resolved",
       "digest": "3ba727c3cc1de015532eec00aeb4a0c6d89bc7fa37095b49e7bb500a9d34806f",
       "target": "문서"
+    },
+    "O-0168": {
+      "status": "resolved",
+      "digest": "d08f0c6e8f4d698325bff493ff2bef66754c165c37f1ba967a1c387b23233387",
+      "target": "문서"
+    },
+    "O-0169": {
+      "status": "resolved",
+      "digest": "575438297f138c98fbde3193b330a86f8313907e494c9c72c1447548526ac3d6",
+      "target": "C-003"
+    },
+    "O-0170": {
+      "status": "resolved",
+      "digest": "adb138ee1d4fb4a34b46aa3eaf789b487893631b22914a9504748086dbc0ec24",
+      "target": "C-003"
+    },
+    "O-0171": {
+      "status": "resolved",
+      "digest": "2a45515222e9c841d318c2a51f4eefd6094a0b4792d7ad1298bef089e80058c5",
+      "target": "C-003"
+    },
+    "O-0172": {
+      "status": "open",
+      "digest": "00240a7467736e1d45212a95a9eae8567fa3e6cdb1f3ed45ffbace8d658dc96c",
+      "target": "C-003"
     }
   },
-  "signature": "66c43b24a382791ce3f64b09dcd0596322cdbcfe0cd664a9a4b40f76f5318754",
+  "signature": "4784b9f0478aec77aaa9f911fbc1ae7a4bfd10838dc94148f0f69b1e856f6029",
   "history": [
-    {
-      "iteration": 563,
-      "at": "2026-08-19T09:32:03+00:00",
-      "signature": "008b55e729c89707f4182037256be516da2df86451845caa6c6311f12c79b529",
-      "ok": true,
-      "conditions": 3,
-      "open": 1,
-      "resolved_now": 1,
-      "raised_now": 1,
-      "violations": []
-    },
-    {
-      "iteration": 564,
-      "at": "2026-08-19T09:36:45+00:00",
-      "signature": "6f25631210e929bb37d4cdd1423657df1260f26582c3b15e9078edbd82565d76",
-      "ok": true,
-      "conditions": 3,
-      "open": 1,
-      "resolved_now": 1,
-      "raised_now": 1,
-      "violations": []
-    },
-    {
-      "iteration": 565,
-      "at": "2026-08-19T09:43:44+00:00",
-      "signature": "9730a576554ac72210f33c063201dc6d2cb0f3cd4bb650f76860f735dda7e98d",
-      "ok": true,
-      "conditions": 3,
-      "open": 1,
-      "resolved_now": 1,
-      "raised_now": 1,
-      "violations": []
-    },
-    {
-      "iteration": 566,
-      "at": "2026-08-19T09:50:48+00:00",
-      "signature": "eadc86c01f6318b5d016d65899ff3b17cafb6c1eac43a744d85dfe923bc8e901",
-      "ok": true,
-      "conditions": 3,
-      "open": 1,
-      "resolved_now": 1,
-      "raised_now": 1,
-      "violations": []
-    },
-    {
-      "iteration": 567,
-      "at": "2026-08-19T09:56:58+00:00",
-      "signature": "9e1305313978cf357d6021b16ed055f715722d238ca973c3c7f934a4962fdee7",
-      "ok": true,
-      "conditions": 3,
-      "open": 1,
-      "resolved_now": 1,
-      "raised_now": 1,
-      "violations": []
-    },
     {
       "iteration": 568,
       "at": "2026-08-19T10:02:08+00:00",
@@ -1453,6 +1424,123 @@
         "C-001 27551자 > 6000자",
         "C-002 44332자 > 6000자"
       ]
+    },
+    {
+      "iteration": 613,
+      "at": "2026-08-19T15:05:51+00:00",
+      "signature": "62c62f92932df92a6cd030cdbc97728d6066241960179d0e587cb8bf1158ee5e",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": [],
+      "resolved_ids": [
+        "O-0167"
+      ],
+      "raised_ids": [
+        "O-0168"
+      ],
+      "superseded_ids": [],
+      "changed_ids": [
+        "C-001",
+        "C-002",
+        "C-003"
+      ],
+      "size": 2547,
+      "over_budget": []
+    },
+    {
+      "iteration": 614,
+      "at": "2026-08-19T15:07:31+00:00",
+      "signature": "66d77b881b55846d2afc48c1f463476e24590887a2b36a4f4f8fae8352136493",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": [],
+      "resolved_ids": [
+        "O-0168"
+      ],
+      "raised_ids": [
+        "O-0169"
+      ],
+      "superseded_ids": [],
+      "changed_ids": [
+        "C-003"
+      ],
+      "size": 2840,
+      "over_budget": []
+    },
+    {
+      "iteration": 615,
+      "at": "2026-08-19T15:08:36+00:00",
+      "signature": "9737d6554325e52b22d89820193af2c195d383ae6783ef83b0af90f691946b32",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": [],
+      "resolved_ids": [
+        "O-0169"
+      ],
+      "raised_ids": [
+        "O-0170"
+      ],
+      "superseded_ids": [],
+      "changed_ids": [
+        "C-003"
+      ],
+      "size": 2946,
+      "over_budget": []
+    },
+    {
+      "iteration": 616,
+      "at": "2026-08-19T15:10:25+00:00",
+      "signature": "8b1c1ff26c122d4b2a59b6525b70b9fd6a69436d2a3674ff156d1cc909ccf151",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": [],
+      "resolved_ids": [
+        "O-0170"
+      ],
+      "raised_ids": [
+        "O-0171"
+      ],
+      "superseded_ids": [],
+      "changed_ids": [
+        "C-003"
+      ],
+      "size": 3188,
+      "over_budget": []
+    },
+    {
+      "iteration": 617,
+      "at": "2026-08-19T15:11:56+00:00",
+      "signature": "4784b9f0478aec77aaa9f911fbc1ae7a4bfd10838dc94148f0f69b1e856f6029",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": [],
+      "resolved_ids": [
+        "O-0171"
+      ],
+      "raised_ids": [
+        "O-0172"
+      ],
+      "superseded_ids": [],
+      "changed_ids": [
+        "C-003"
+      ],
+      "size": 3645,
+      "over_budget": []
     }
   ]
 }
