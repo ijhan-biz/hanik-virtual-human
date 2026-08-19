@@ -127,6 +127,8 @@ scripts/hanik_autorun.sh finish     # 캠페인 마감: 멈추고 마지막 결�
 표시가 남아 있는 한 루프는 반복을 기록한 뒤 곧바로 물러난다.
 
 기본 세션 간격은 10초이며 `HANIK_AUTO_INTERVAL=0`으로 즉시 다음 세션을 시작한다.
+세션은 `HANIK_MODEL`(기본 `gpt-5.6-luna`)이 지정한 모델로 돈다. `auto`로 두지 않는
+것은 반복마다 모델이 달라지면 무엇이 이 문서를 썼는지 나중에 되짚을 수 없기 때문이다.
 러너는 네트워크 URL과 내장 GitHub MCP를 끄고 실행한다. 자동 실행은 판단을 대신하지
 않으며, 각 세션이 `Hanik.md`와 `objections/`를 실제로 고쳐야 다음 반복이 진행된다.
 
@@ -151,6 +153,7 @@ scripts/hanik_autorun.sh finish     # 캠페인 마감: 멈추고 마지막 결�
 | `HANIK_PREAMBLE_BUDGET` | `4000` | 서문의 분량 상한(R13) |
 | `HANIK_STAGNATION_LIMIT` | `5` | 같은 증거 서명이 이만큼 이어지면 정체로 본다 |
 | `HANIK_FINISH` | (없음) | `1`이면 이번 반복을 마지막으로 삼는다 |
+| `HANIK_MODEL` | `gpt-5.6-luna` | 자동 실행 세션이 쓸 모델 |
 
 종료 코드는 셋이다. `0`은 통과, `1`은 위반, `3`은 **루프가 물러남**(정체 또는 마감)이다.
 

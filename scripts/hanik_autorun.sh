@@ -12,6 +12,10 @@ PID_FILE="$AUTO_DIR/pid"
 STOP_FILE="$AUTO_DIR/stop"
 FINISH_FILE="$ROOT/state/finish"
 INTERVAL="${HANIK_AUTO_INTERVAL:-10}"
+# 세션이 쓸 모델. 반복이 남기는 글의 질은 전적으로 세션의 판단에 달려 있으므로
+# 모델은 러너의 설정 가운데 가장 무거운 것이다. `auto`로 두면 반복마다 달라질 수
+# 있어, 무엇이 이 문서를 썼는지 나중에 되짚을 수 없다.
+MODEL="${HANIK_MODEL:-gpt-5.6-luna}"
 # 원시 로그가 이 크기를 넘으면 한 번만 회전시킨다. 러너는 세션마다 수천 줄을
 # 쏟아내지만 남을 가치가 있는 것은 state/sessions.md와 SUMMARY.md에 추려진다.
 LOG_MAX_BYTES="${HANIK_LOG_MAX_BYTES:-2000000}"
@@ -94,7 +98,7 @@ show_status() {
     local pid
     pid="$(read_pid)"
     if is_running "$pid"; then
-        printf '실행 중입니다 (PID %s).\n로그: %s\n' "$pid" "$LOG_DIR/runner.log"
+        printf '실행 중입니다 (PID %s).\n모델: %s\n로그: %s\n' "$pid" "$MODEL" "$LOG_DIR/runner.log"
     elif [ -f "$FINISH_FILE" ]; then
         printf '마감되었습니다. 다시 열려면 %s를 지우세요.\n' "$FINISH_FILE"
     else
@@ -117,7 +121,7 @@ except (FileNotFoundError, json.JSONDecodeError, OSError):
     print(0)
 ')"
 
-    log "Copilot 세션 시작 (직전 반복 $before)"
+    log "Copilot 세션 시작 (모델 $MODEL · 직전 반복 $before)"
     copilot \
         -C "$ROOT" \
         --prompt "$(cat <<'PROMPT'
@@ -132,6 +136,7 @@ except (FileNotFoundError, json.JSONDecodeError, OSError):
 PROMPT
 )" \
         --mode autopilot \
+        --model "$MODEL" \
         --no-ask-user \
         --allow-all-tools \
         --allow-all-paths \
