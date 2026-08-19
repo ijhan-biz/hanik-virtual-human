@@ -1,19 +1,19 @@
 {
   "version": 1,
-  "iteration": 1,
-  "updated_at": "2026-08-18T16:07:36+00:00",
+  "iteration": 612,
+  "updated_at": "2026-08-19T14:58:31+00:00",
   "document": {
-    "digest": "e2324b81804d080fd67df8309d4cca5d502bfbfcb27ab8e51ef7f78a77f0df86",
-    "preamble_digest": "db551382e5b08f96a170540600dd688d7d8951111dcd90f64cbf99a5adf12cac"
+    "digest": "fb5be53ebe90d4b14186f2d34fcae71bbe8a16af41b9ebbed40eab0f08781f36",
+    "preamble_digest": "ed894620d0aafa6e48e76a4b2a06a0939d38916ca7e2359443a22c5f6ee3d2d3"
   },
   "conditions": {
     "C-001": {
-      "digest": "2d4cd28eeea8e4293ce359048e6ecec2d4713f5ad0605a96b24df4163ee476c1",
-      "substance_digest": "72e8c2ec32b6c9efcfebdb441307e0c67cffd4f480d32c5b4c9a8a2e7bebde18"
+      "digest": "49d612945f7be78724c90f3b4be8c5719a9449c68b6b2f79ff2465f53bd16614",
+      "substance_digest": "5ea0d3bb255612c221eaa6fe4e86cb6365b507b5e57827060ed58b63d3abb6ca"
     },
     "C-002": {
-      "digest": "adb41395ab3fb47073a6426e69cc7fc233a7901bef8937173e323c46b4dba20c",
-      "substance_digest": "85d994f10b4e80065f0beda89cb9688d869660867c2feb7433a1018049695746"
+      "digest": "6fa5e2b0a28f0ab536c52ccf59a1fb09f8b25ba24c81a53488fcdb16f1854163",
+      "substance_digest": "352dc068db2aa849c48adbf15b4f0385686a857da02558bfb741f449e0037479"
     },
     "C-003": {
       "digest": "35f8538aa4acc718b30e37b23cb3ff3ec07bd2e9caf791d85b67a0e1ad7a064b",
@@ -22,33 +22,1437 @@
   },
   "objections": {
     "O-0001": {
-      "status": "open",
+      "status": "resolved",
       "digest": "8bd28f55b71d4bdfb3118f9d933ceb795f0282703afeaf738f498e6a64fedea3",
       "target": "C-001"
     },
     "O-0002": {
-      "status": "open",
+      "status": "resolved",
       "digest": "f4ac3f03f22ef4ec48c64e70396c5e2fbd6e40b259d56889f7dc055189f12fc0",
       "target": "C-002"
     },
     "O-0003": {
-      "status": "open",
+      "status": "resolved",
       "digest": "fed819bd2548a58086d2290350340e93c3cf392d2422e13a2dac8faaf160c9ce",
+      "target": "문서"
+    },
+    "O-0004": {
+      "status": "resolved",
+      "digest": "a40e1647568809122002d778484f69b62dc61bb8475f61e44a4b3a03efa59274",
+      "target": "C-001"
+    },
+    "O-0005": {
+      "status": "resolved",
+      "digest": "7c8045845487daea6cd8e4eae0b73a781351321cbfd7bf2a68542a45ed1bca78",
+      "target": "C-002"
+    },
+    "O-0006": {
+      "status": "resolved",
+      "digest": "235e32837ce1a62a0ff2e3b35fa9af625d38eab3bdda97c9eb6f0f02ba62cabd",
+      "target": "문서"
+    },
+    "O-0007": {
+      "status": "resolved",
+      "digest": "82bee428e71f40236b58824d20e1169e62e16163fb3b2a1df6ae643acc24d7f6",
+      "target": "C-001"
+    },
+    "O-0008": {
+      "status": "resolved",
+      "digest": "3d0710769e0d0bfd896b544447a456fad8fe06b64b28ab785ad91b3617639173",
+      "target": "C-002"
+    },
+    "O-0009": {
+      "status": "resolved",
+      "digest": "3bd168c36efd90b850bd9acd66b1b3ea5cf7d5304af0a45f438f3ea8fb764cb9",
+      "target": "문서"
+    },
+    "O-0010": {
+      "status": "resolved",
+      "digest": "779177730f1173681912003ff2caa668b08f12342e8551706466d7230488d1cc",
+      "target": "C-001"
+    },
+    "O-0011": {
+      "status": "resolved",
+      "digest": "857bc0495f5cf6f0b61bab9e4da500f77903f61f8208facafe0d9217ecf40d3b",
+      "target": "C-002"
+    },
+    "O-0012": {
+      "status": "resolved",
+      "digest": "da0965b405a9835c7cd0f0519cd0ae79f2f0eae27b3abef5e0289563609389b0",
+      "target": "문서"
+    },
+    "O-0013": {
+      "status": "resolved",
+      "digest": "60522a2d4a60c3a1a79e03aaf10393879ee33e9b2d389c6b5285a125c9c3157f",
+      "target": "C-001"
+    },
+    "O-0014": {
+      "status": "resolved",
+      "digest": "28c978de24acecb4e308041751ab8fe8faf08ecf987cf155dcaed1fea12243e8",
+      "target": "C-002"
+    },
+    "O-0015": {
+      "status": "resolved",
+      "digest": "be746b336ffbf4762c3536c7f3852c14388c300527ba9bdf450f5d4a401a1f1d",
+      "target": "문서"
+    },
+    "O-0016": {
+      "status": "resolved",
+      "digest": "1fa9a44fa2dc92a7c285008a252052b4a9bd20afaece4bab240fc9ea3e14a93f",
+      "target": "C-001"
+    },
+    "O-0017": {
+      "status": "resolved",
+      "digest": "7dbaff5937990b47245a6ac4df7270e8d852b5d31fab2a26e2273cdf1aa53a07",
+      "target": "C-002"
+    },
+    "O-0018": {
+      "status": "resolved",
+      "digest": "21860a2a11ca99e5a5249ac1bcee1354f951f864e335f79972312a8feea416d7",
+      "target": "문서"
+    },
+    "O-0019": {
+      "status": "resolved",
+      "digest": "d4e8844d07b4a229e7c635057d794167db0e7ef0cc4c7880311aad4d56390822",
+      "target": "C-001"
+    },
+    "O-0020": {
+      "status": "resolved",
+      "digest": "84eab9bade110001fc67f2d43de439c98b960c212ee0dc7389a8f5d144406f31",
+      "target": "C-002"
+    },
+    "O-0021": {
+      "status": "resolved",
+      "digest": "e5ec5ae5eda0b931641f67b89bdd49ef7278100548303c61c4c7abd31d4ca114",
+      "target": "문서"
+    },
+    "O-0022": {
+      "status": "resolved",
+      "digest": "91abeae50e44d5ba1ce8d709115d96f2bc0aee55476c3cd12f4ba8a774b694f6",
+      "target": "C-001"
+    },
+    "O-0023": {
+      "status": "resolved",
+      "digest": "686f56e7b096b29902e64ca1dcf3f4ad98755b63d4b2b31e10a9b44381255a5a",
+      "target": "C-002"
+    },
+    "O-0024": {
+      "status": "resolved",
+      "digest": "b34ed9faeed400bb389cfdb5477ac6272cb54d6ccbf3fe23d8d70922be673e35",
+      "target": "문서"
+    },
+    "O-0025": {
+      "status": "resolved",
+      "digest": "77db2b576ca4c21867d7383d17ca9ad2b04feda17c3b14468ad38612be4cb0e0",
+      "target": "C-001"
+    },
+    "O-0026": {
+      "status": "resolved",
+      "digest": "3111dd4001d29a1577599d21945ca601a6d434fe752e9cfcc3f74fb0f5e8ec0e",
+      "target": "C-002"
+    },
+    "O-0027": {
+      "status": "resolved",
+      "digest": "07423d28d432a86711c1358d470002a3d94890e48f5f2a7684e7dac8522ee76d",
+      "target": "문서"
+    },
+    "O-0028": {
+      "status": "resolved",
+      "digest": "daa9fa02d93efe1f9eae0a07faab1669a5cd2062309a6ee08ceef26d7d144a68",
+      "target": "C-001"
+    },
+    "O-0029": {
+      "status": "resolved",
+      "digest": "c611441b64c705bab9ba07ec014752f718f9bda38702362ea1fa7c665eba6594",
+      "target": "C-002"
+    },
+    "O-0030": {
+      "status": "resolved",
+      "digest": "f073197d1fed9000e58ae1cdfc6f247b1a51105f7212f40407b8d6eca657871f",
+      "target": "문서"
+    },
+    "O-0031": {
+      "status": "resolved",
+      "digest": "22a3421411a011a13c3ae07f59fa5a0a44d44cd05d89787f303644c0280b663b",
+      "target": "C-001"
+    },
+    "O-0032": {
+      "status": "resolved",
+      "digest": "5771ea402814e1c5c82a5b2df3f0c2ac0d6f92e13a26dd689db5adce2f2a5813",
+      "target": "C-002"
+    },
+    "O-0033": {
+      "status": "resolved",
+      "digest": "05321c0142d29f5dd6db5e330338bee0a04843851f140fed6a482e155abeb6d5",
+      "target": "문서"
+    },
+    "O-0034": {
+      "status": "resolved",
+      "digest": "058b58bd795f8da2a1e67fe89796eb6d7ebe42c83a97d68bd76506f6a45dd7b8",
+      "target": "C-001"
+    },
+    "O-0035": {
+      "status": "resolved",
+      "digest": "2e273efa9af001b6c4ba9a6a80c4526cabb3eb33754733327a0d7de8ae0347d3",
+      "target": "C-002"
+    },
+    "O-0036": {
+      "status": "resolved",
+      "digest": "b4ad9309835fa5ac0060af2592480ac390ae73d7b3b4cd9cd5cfc3103ead4202",
+      "target": "문서"
+    },
+    "O-0037": {
+      "status": "resolved",
+      "digest": "8107b3d5e9fd6656477cfc810ddaba49b5d8580df2d04a9790ff0ed338efcb87",
+      "target": "C-001"
+    },
+    "O-0038": {
+      "status": "resolved",
+      "digest": "dc6bc332f0cc2a48903575d64d17fa270bbdc53c56c98c2dc5b9743389f2b7de",
+      "target": "C-002"
+    },
+    "O-0039": {
+      "status": "resolved",
+      "digest": "e6235e46b7182a2060fdb54fb9ca4ab8d0adcf9330630c8ad92b72aee834588b",
+      "target": "문서"
+    },
+    "O-0040": {
+      "status": "resolved",
+      "digest": "c461499f2b78016c839425ba68427bfe75cb79835f42b68e690119f51b8f4949",
+      "target": "C-001"
+    },
+    "O-0041": {
+      "status": "resolved",
+      "digest": "ca541732afaea5282af6cd773ff9ddbcf397334b5db0eb13ad8e1e9d70d687f2",
+      "target": "C-002"
+    },
+    "O-0042": {
+      "status": "resolved",
+      "digest": "163940a51cdc83660254d89225f3a611da8939ba9189541ab03d4496ba3c2b8f",
+      "target": "문서"
+    },
+    "O-0043": {
+      "status": "resolved",
+      "digest": "e67e6a6f637dbb1b407934771d24bfe17a9af28eac1f3b3d5441bfc14a46a9a4",
+      "target": "C-001"
+    },
+    "O-0044": {
+      "status": "resolved",
+      "digest": "5e2e9b365dfe18e212bf33321a4e9d42277872af0cfedddb279739f9c173c841",
+      "target": "C-002"
+    },
+    "O-0045": {
+      "status": "resolved",
+      "digest": "0edb47b68baddc8a5fefeaf5121ace455082cd2dca1a4e6a7a1122aed2620170",
+      "target": "문서"
+    },
+    "O-0046": {
+      "status": "resolved",
+      "digest": "9aff83a4fbf048e2b7f0de6193ad1b973c80adce8f8ea41868ebe1e487ead43b",
+      "target": "C-001"
+    },
+    "O-0047": {
+      "status": "resolved",
+      "digest": "e81fa08af073aafb9cc5fa252c4c21c88e727db279fefd3f0897b47658409b7b",
+      "target": "C-002"
+    },
+    "O-0048": {
+      "status": "resolved",
+      "digest": "52f18ae164550edfa03c2c12bd0332e24a3c4a2ef719ba86c6d210b4c15215a4",
+      "target": "문서"
+    },
+    "O-0049": {
+      "status": "resolved",
+      "digest": "465156baefbca1db44c8ae0281c891f57f8fa02e07f3071b57385a8a1c81adec",
+      "target": "C-001"
+    },
+    "O-0050": {
+      "status": "resolved",
+      "digest": "2e64b01d815b251efd4771941e3b313f84d94e15b40175526209d88e348198af",
+      "target": "C-002"
+    },
+    "O-0051": {
+      "status": "resolved",
+      "digest": "e69b7c74375533b28c266f9a94ceb52c42bf56084581f00f69d4ab9d1ed49d2a",
+      "target": "문서"
+    },
+    "O-0052": {
+      "status": "resolved",
+      "digest": "924c539948df4fd6834cf0dde952e91f779e1648c43a05677f69b3567d4749bf",
+      "target": "C-001"
+    },
+    "O-0053": {
+      "status": "resolved",
+      "digest": "1cd97788562010bf451872f1342e60ab71487d80887c4ae8f2688cce8ec416d1",
+      "target": "C-002"
+    },
+    "O-0054": {
+      "status": "resolved",
+      "digest": "2eb56149b8a6d070a30f3689dbc3833fc9c3f74152b90cd520c107c67cf9cb51",
+      "target": "문서"
+    },
+    "O-0055": {
+      "status": "resolved",
+      "digest": "c5e3a37afb7ea75929f1e5fc156a33530e2a32f2478eb3739fea5fe396f874dc",
+      "target": "C-002"
+    },
+    "O-0056": {
+      "status": "resolved",
+      "digest": "368eb1ba00f862cb708a9badc6f1ea1ff94860db2378616e16ae0f57623b8f54",
+      "target": "문서"
+    },
+    "O-0057": {
+      "status": "resolved",
+      "digest": "047d04d0b65e627ae528c28d1734e4d88d16be5558050cbb42084c44522fc4d9",
+      "target": "C-002"
+    },
+    "O-0058": {
+      "status": "resolved",
+      "digest": "dd4aa2d427b68caa1796a0ce4ea31698bbf41c73ea593a4186e6e098b12b3eac",
+      "target": "문서"
+    },
+    "O-0059": {
+      "status": "resolved",
+      "digest": "e1c67d9393fc47062a7c466e5e092001df3a6c3646959de28a36f742424a74bd",
+      "target": "C-002"
+    },
+    "O-0060": {
+      "status": "resolved",
+      "digest": "183db539cb7e337c8568830b314086cd624f5eed5ca7ac216d619517904fb0ee",
+      "target": "문서"
+    },
+    "O-0061": {
+      "status": "resolved",
+      "digest": "084edd91d931a9f0f23cc8dc925a326a68643dedc904487b5b0492d2280e9a91",
+      "target": "C-002"
+    },
+    "O-0062": {
+      "status": "resolved",
+      "digest": "f13f383e85881b93ff095715b0b16d39f687d351904a1d6ed563004884a1b90d",
+      "target": "문서"
+    },
+    "O-0063": {
+      "status": "resolved",
+      "digest": "eefea84801dbd8b5e857c269d4e203590598c4e714906ef2146bcd98ce255826",
+      "target": "C-002"
+    },
+    "O-0064": {
+      "status": "resolved",
+      "digest": "69f5c1b83f50a7007cfdce0d7eb8d320571408757245c73cb324e331c0270a3a",
+      "target": "문서"
+    },
+    "O-0065": {
+      "status": "resolved",
+      "digest": "6e47fada3de54244db9f9ba93a224c93b98a83d54434869fc11d7e4231ef4a85",
+      "target": "C-002"
+    },
+    "O-0066": {
+      "status": "resolved",
+      "digest": "49a409612a7000fef39261dbb2adedb06aef79ac9a85ceb97df03aa80f627f09",
+      "target": "문서"
+    },
+    "O-0067": {
+      "status": "resolved",
+      "digest": "2372f01e2828ba1c75fb6be948ed55f6f94ca8e0c6fa5441fe6698421990a0be",
+      "target": "C-002"
+    },
+    "O-0068": {
+      "status": "resolved",
+      "digest": "27872cdff8406acdf11eed50a592503bc55a7a26f71557f3c00b49c956b71fd7",
+      "target": "문서"
+    },
+    "O-0069": {
+      "status": "resolved",
+      "digest": "7cf0fce4558f116e39c516b2e12f497ae4c0a360850feedc16858aed140dff2a",
+      "target": "C-002"
+    },
+    "O-0070": {
+      "status": "resolved",
+      "digest": "9d17099d6a4efb432481d6aef4b669fb6b1e8ae33d194c7acaefc741ecad32ce",
+      "target": "문서"
+    },
+    "O-0071": {
+      "status": "resolved",
+      "digest": "bd49c181e9dc473bbf1fb3960d4594c448f779560f17d74184638cd45317a87c",
+      "target": "C-002"
+    },
+    "O-0072": {
+      "status": "resolved",
+      "digest": "040650a7c20f9794dd0814a71b9b78ccd562e88f8def1bfe06ae88d71228244b",
+      "target": "문서"
+    },
+    "O-0073": {
+      "status": "resolved",
+      "digest": "01a606ca904a119976cd5def159e49efe69c07df7b04062fe7843133eeb5071a",
+      "target": "C-002"
+    },
+    "O-0074": {
+      "status": "resolved",
+      "digest": "4dd907d22490ffc077c23b83fffb1ad2afbbd03ed04c441c70ed4be9667653f7",
+      "target": "문서"
+    },
+    "O-0075": {
+      "status": "resolved",
+      "digest": "cc12d6d76a2f459ff4f4c23eece1e394df947cdf1e9e2fd97a10233d52a01564",
+      "target": "문서"
+    },
+    "O-0076": {
+      "status": "resolved",
+      "digest": "6ba280f445f8c23c07e7f6885516d81053e992e30cebce6cdeacfbc0e37a9b4b",
+      "target": "문서"
+    },
+    "O-0077": {
+      "status": "resolved",
+      "digest": "6d5f6589ddf2cbf82fed04849d4443aecb19d816a9cb7d184e20bde08c6aad01",
+      "target": "문서"
+    },
+    "O-0078": {
+      "status": "resolved",
+      "digest": "afcda4f786e6aeacb156466793e0e2a49922403800f83540b3e3df1fce67633d",
+      "target": "문서"
+    },
+    "O-0079": {
+      "status": "resolved",
+      "digest": "a39577d98abfc06fdfd48583ac5d804c41bde09e38283ee883651ceeaace3e85",
+      "target": "문서"
+    },
+    "O-0080": {
+      "status": "resolved",
+      "digest": "875cbc4ed7892340ff78972c68d39ed4572d38714c82d335c46e036d82ee1ee4",
+      "target": "문서"
+    },
+    "O-0081": {
+      "status": "resolved",
+      "digest": "537ccc2874cf46b843712b393fb7aa904f32fd5c8c7c9c353613cb05dd501247",
+      "target": "문서"
+    },
+    "O-0082": {
+      "status": "resolved",
+      "digest": "4c37b2fdcda49b705afc160a32fa204818ebdb76b5f8d04d38ad02631453a87a",
+      "target": "문서"
+    },
+    "O-0083": {
+      "status": "resolved",
+      "digest": "3c5d3dfffcf91eb1e8147bd8fd657a3d23e0a298c57f2833a15c370bdd46d291",
+      "target": "문서"
+    },
+    "O-0084": {
+      "status": "resolved",
+      "digest": "ec6a7b5dffb7ec0156c98fd0b889876b3cd7ec22e0a039175302330ef326b65d",
+      "target": "문서"
+    },
+    "O-0085": {
+      "status": "resolved",
+      "digest": "c0781b92b3981d73d1adbd85fdd030625e501f781fce2ef15bed205dfd3e39ee",
+      "target": "문서"
+    },
+    "O-0086": {
+      "status": "resolved",
+      "digest": "9bf469dc631e3d6f46e2ac30c96178b43288bb1baf27f931dc60a7c1059e2fa9",
+      "target": "문서"
+    },
+    "O-0087": {
+      "status": "resolved",
+      "digest": "737eb7a25db15ffdc7a41c30a832cc36f82a7d24a99353a1b12fa99b1daf7f5b",
+      "target": "문서"
+    },
+    "O-0088": {
+      "status": "resolved",
+      "digest": "0dcaca0c5a80619042343234b65e1ffc53612bb76b54c423bf0531983d11c6d7",
+      "target": "문서"
+    },
+    "O-0089": {
+      "status": "resolved",
+      "digest": "e3953a7a6a07cc958c3521893d46e1345589ba512fd4309a232ef89e7ffb86b1",
+      "target": "문서"
+    },
+    "O-0090": {
+      "status": "resolved",
+      "digest": "15b366023904c2cdc1f9f2b2d2fc63b00bfe772617d569176925c5fa1508226c",
+      "target": "문서"
+    },
+    "O-0091": {
+      "status": "resolved",
+      "digest": "6b6abcf5a7046132dec6b40c3cedc734d03fc5e4c148ba552724efd1c78561a8",
+      "target": "문서"
+    },
+    "O-0092": {
+      "status": "resolved",
+      "digest": "ab047d39cb2393668ab4ae3d96942ce683be1a37229651ae80447dda96799e0f",
+      "target": "문서"
+    },
+    "O-0093": {
+      "status": "resolved",
+      "digest": "c63231ff256bae9846bbd0a28611c118c980d35dddfd9fb26bdb6c81ca5246cc",
+      "target": "문서"
+    },
+    "O-0094": {
+      "status": "resolved",
+      "digest": "ab6172a474636c12f3f2a81a4d2ee0791a4bcb3f9ff7dd85e2edf8adb1e65304",
+      "target": "문서"
+    },
+    "O-0095": {
+      "status": "resolved",
+      "digest": "6f66005d5ab4b322a3655678a8e550cac6352860a6dbc4a2e75745bdcdd2db14",
+      "target": "문서"
+    },
+    "O-0096": {
+      "status": "resolved",
+      "digest": "d4f6d159e0398fe99f97e01e143b41e14fbb46ba812726106fb03e2a34e67c28",
+      "target": "문서"
+    },
+    "O-0097": {
+      "status": "resolved",
+      "digest": "811fdec3dfe9f0a3a16a4aef26fe74baf82a8313ee41dadfe948715532ca9106",
+      "target": "문서"
+    },
+    "O-0098": {
+      "status": "resolved",
+      "digest": "a229ef23f21b6a50c0675976e6fd6b5852be5dbc73abbbe6a42dce48ebb4f61e",
+      "target": "문서"
+    },
+    "O-0099": {
+      "status": "resolved",
+      "digest": "d392a5c6aa9622b658219b02cd23212ae1b1b924390f7a3411084d48d2bb6b5f",
+      "target": "문서"
+    },
+    "O-0100": {
+      "status": "resolved",
+      "digest": "c6116cff48386e7365ff3dcf1c74d0e3ac56a18381fbdf49285bfff70cc85cde",
+      "target": "문서"
+    },
+    "O-0101": {
+      "status": "resolved",
+      "digest": "943e5953356ffebd28abe593a1222c4d9d0f6e4946754d11f840c55e8eaa1710",
+      "target": "문서"
+    },
+    "O-0102": {
+      "status": "resolved",
+      "digest": "d16e5aa943f07c02eae634441e0b0563763efe0ad3814aacd78d62ac7fd316ec",
+      "target": "문서"
+    },
+    "O-0103": {
+      "status": "resolved",
+      "digest": "793fed375fb3dffbd182fac72ea646e7abbd2382eecb788129b02dfd9869b280",
+      "target": "문서"
+    },
+    "O-0104": {
+      "status": "resolved",
+      "digest": "59b5a081854e0f852ff598655eed42be8e871142a9c62d531e5814f5a8b03a84",
+      "target": "문서"
+    },
+    "O-0105": {
+      "status": "resolved",
+      "digest": "5db983e796607f76013117056f5f826f5bfc6d1e0ed9e1c25ace92cc1fc421fe",
+      "target": "문서"
+    },
+    "O-0106": {
+      "status": "resolved",
+      "digest": "7a17b6a7bfbae93839e472af654894a59850fb58ba9efe0c3b77852922122297",
+      "target": "문서"
+    },
+    "O-0107": {
+      "status": "resolved",
+      "digest": "e825510ed2aff577dcc7ac8126b0dd0b83dcf7d0fc8289fbd1957f5f27adcfc7",
+      "target": "문서"
+    },
+    "O-0108": {
+      "status": "resolved",
+      "digest": "619f249aca18d39862e2d17412f8249f8d509bd54514d6cacd10e886cc71e526",
+      "target": "문서"
+    },
+    "O-0109": {
+      "status": "resolved",
+      "digest": "91d154341fd091320742b101ba1a26c36638b4e444ada1b9027ef95fe9362ff9",
+      "target": "문서"
+    },
+    "O-0110": {
+      "status": "resolved",
+      "digest": "8f8317373a3f1345030af60b44528c315187257cc5700a32698e7cf8d6ef9fcf",
+      "target": "문서"
+    },
+    "O-0111": {
+      "status": "resolved",
+      "digest": "f0eeb18c02c89d477b40cd307d54df11a61593c76a5952034632395a09011401",
+      "target": "문서"
+    },
+    "O-0112": {
+      "status": "resolved",
+      "digest": "ae5e59c81f6c70efcea6f0a8b6186d3d601c3748c110bdba21b393a40e9b2c8b",
+      "target": "문서"
+    },
+    "O-0113": {
+      "status": "resolved",
+      "digest": "dad2b485f94b207e65e1d8dc99456a2b2d25ed7d128c67d8c3a54962e1102287",
+      "target": "문서"
+    },
+    "O-0114": {
+      "status": "resolved",
+      "digest": "44083a1a277c8bdab1b8a245e2cbf606a35065c95f94f0b286f3035bd658673d",
+      "target": "문서"
+    },
+    "O-0115": {
+      "status": "resolved",
+      "digest": "af98874336ad547c34448e70c6c6b9933299e6bbed687db75efccc5fab0d0faf",
+      "target": "문서"
+    },
+    "O-0116": {
+      "status": "resolved",
+      "digest": "297bda403cbc2b9e8a6843baaddc6f47f4aa3b0fbb4fe45b53564a1e4ff1afff",
+      "target": "문서"
+    },
+    "O-0117": {
+      "status": "resolved",
+      "digest": "e83609e55f388bac9e530782c5573be54671314b320e49d38c80f5ca08b5fe28",
+      "target": "문서"
+    },
+    "O-0118": {
+      "status": "resolved",
+      "digest": "5b13881c7e843f13dd3a9b7fddfb81433eb7547e1a4993c2e48d49c20bac59c4",
+      "target": "문서"
+    },
+    "O-0119": {
+      "status": "resolved",
+      "digest": "e27d33d5b11b5bfe2690aaeffd718e5d7d34225b9c07830403c55dbe55bb33ce",
+      "target": "문서"
+    },
+    "O-0120": {
+      "status": "resolved",
+      "digest": "26ba20160ad994ec7de61e573182f9b8e241aec070c7d098913a303a14fac958",
+      "target": "문서"
+    },
+    "O-0121": {
+      "status": "resolved",
+      "digest": "0185d6a951193695f4e2509388b072ed1fd8da0c1762b995650a487c420ab280",
+      "target": "문서"
+    },
+    "O-0122": {
+      "status": "resolved",
+      "digest": "628b30b1b58b46b3ff4bee3645dd1fcdf79c97114036a1bc1b7b48d090cb7139",
+      "target": "문서"
+    },
+    "O-0123": {
+      "status": "resolved",
+      "digest": "2704356e04edfb33cf9bf3f9185b107fc12d9a9359787e73bb18a33cfffd66cd",
+      "target": "문서"
+    },
+    "O-0124": {
+      "status": "resolved",
+      "digest": "4bb499fd75087f8f36f55550f511b0f11d86c6935d219955d78fcec537615270",
+      "target": "문서"
+    },
+    "O-0125": {
+      "status": "resolved",
+      "digest": "54244671497455ecfc41d74f57ddae8782214da91d1da3e9952c4616a384fdc2",
+      "target": "문서"
+    },
+    "O-0126": {
+      "status": "resolved",
+      "digest": "0a874cca678dcd7cb11b4d5b561825972be6e0392434fe1ef549394a5ba5840f",
+      "target": "문서"
+    },
+    "O-0127": {
+      "status": "resolved",
+      "digest": "87563f739b5857b92fec7da3aa3eef159faf43568d35fcec56a1c6c7f50410ff",
+      "target": "문서"
+    },
+    "O-0128": {
+      "status": "resolved",
+      "digest": "6d8f0d5478f88628cca03a3ef8f5d84dc9ad9d0862ffa791dd3bd560ee89ba7d",
+      "target": "문서"
+    },
+    "O-0129": {
+      "status": "resolved",
+      "digest": "e118d3974908888235f3f867aa3eff030ea6843e8fe0600c110f1f22d9b7c72e",
+      "target": "문서"
+    },
+    "O-0130": {
+      "status": "resolved",
+      "digest": "0b79ebe569fbdb829f37f795bcd424ffda21d550890002f054fab4842dc48f5c",
+      "target": "문서"
+    },
+    "O-0131": {
+      "status": "resolved",
+      "digest": "79b40388995ea0b7853ae5c292c5564991176c2c444da93225baa4409dbbb177",
+      "target": "문서"
+    },
+    "O-0132": {
+      "status": "resolved",
+      "digest": "a7ebf5e2dca2ec225eeb209b9873b2d45f6a680b6923dd9cfdf99a0297149e5f",
+      "target": "문서"
+    },
+    "O-0133": {
+      "status": "resolved",
+      "digest": "156e704b5b493a459e0991d61a2fd4464ee9c99dc4ada4f8d48f167a847e93e5",
+      "target": "문서"
+    },
+    "O-0134": {
+      "status": "resolved",
+      "digest": "52906a1dfd9a95ca66c1112e48d8af45b8ff94573b76d017fe885c8ff40d3779",
+      "target": "문서"
+    },
+    "O-0135": {
+      "status": "resolved",
+      "digest": "de511c85856ccca8bdc2899ed832755a38af0aedb17ea7e66814d5461626dff5",
+      "target": "문서"
+    },
+    "O-0136": {
+      "status": "resolved",
+      "digest": "ea54d2016fd9a8eec25920f273d312eac3f2f402fde220ee477a280c2beaf649",
+      "target": "문서"
+    },
+    "O-0137": {
+      "status": "resolved",
+      "digest": "7b1f2090e053a945f9cc2c9209bf517438d7bc91381700c65041d8639f80d434",
+      "target": "문서"
+    },
+    "O-0138": {
+      "status": "resolved",
+      "digest": "912d1ce971f107ecb04766d40f0292fe9b68d6ed9b78ad1ed921590879b7293f",
+      "target": "문서"
+    },
+    "O-0139": {
+      "status": "resolved",
+      "digest": "16054551c9e40d607e5015fb4aa78fa41db3fc4a276b724e5426a5266007193b",
+      "target": "문서"
+    },
+    "O-0140": {
+      "status": "resolved",
+      "digest": "9ee0bfe57d275d4aa633d214c533f33be03b7bcbfe951670543394e4a451b7d6",
+      "target": "문서"
+    },
+    "O-0141": {
+      "status": "resolved",
+      "digest": "f5ce633a3a220c56aad8c0372ed996cadd28a6f2dcefe9a45d541806a179cabd",
+      "target": "문서"
+    },
+    "O-0142": {
+      "status": "resolved",
+      "digest": "84da4b1ce02ce86436760542211288cc51f66eae4f9eb0556f228e3cfbea595d",
+      "target": "문서"
+    },
+    "O-0143": {
+      "status": "resolved",
+      "digest": "338d62d0913709feade82c15ea3aaa77c66d2534aeddd8b2a00c814e503b76cf",
+      "target": "문서"
+    },
+    "O-0144": {
+      "status": "resolved",
+      "digest": "5645aeb000d3c3abf3f12f784d111d8eeac8d6c0ae8fda038daeeb4fc1900d85",
+      "target": "문서"
+    },
+    "O-0145": {
+      "status": "resolved",
+      "digest": "02bdf3d49614f0a9c58d1957c46685acb98b59275c0519e092cfe7d51dc3e5fe",
+      "target": "문서"
+    },
+    "O-0146": {
+      "status": "resolved",
+      "digest": "4ccf6184d0938b419a7673f09d31d0bb71e28e038efbdef95b6732a9755f231a",
+      "target": "문서"
+    },
+    "O-0147": {
+      "status": "resolved",
+      "digest": "f7c3a95df24d830a84555a5c4b3f87954075417e7d1f9a00e4f9a013eb9fac8b",
+      "target": "문서"
+    },
+    "O-0148": {
+      "status": "resolved",
+      "digest": "1b5ac02ba414d7261e06193b3e7b23c74035df35a449ee6c2c392f6e8e503257",
+      "target": "문서"
+    },
+    "O-0149": {
+      "status": "resolved",
+      "digest": "f9eb71c778061c6130deaa5a191251c4a3bc3b7a748289dfd497abf646e6c41e",
+      "target": "문서"
+    },
+    "O-0150": {
+      "status": "resolved",
+      "digest": "ef5b1839b8560d819a95442f624bd9aa77610e18f5914bd221da3ed5457fd410",
+      "target": "문서"
+    },
+    "O-0151": {
+      "status": "resolved",
+      "digest": "20099a8ba83a5e8c84c0ce92f0857b596d8c150b5dd8b4c7cf1dd12b392ac54f",
+      "target": "문서"
+    },
+    "O-0152": {
+      "status": "resolved",
+      "digest": "1d21e276553a9e73753752e447d742ce814979714dc68187febbc340e6edf8e2",
+      "target": "문서"
+    },
+    "O-0153": {
+      "status": "resolved",
+      "digest": "76c654ece2cece24fbb1ec702fbeb69a83a9ef0fd72f8d0bf0d5648762861c86",
+      "target": "문서"
+    },
+    "O-0154": {
+      "status": "resolved",
+      "digest": "d8cd45a7fd273546c2b41c811c9615030038807cd6664defd240ff797a7f2f69",
+      "target": "문서"
+    },
+    "O-0155": {
+      "status": "resolved",
+      "digest": "fdc271e73807c4a94f10e4c4c8e51d5046988698c48f074637ea0acbd53eb73d",
+      "target": "문서"
+    },
+    "O-0156": {
+      "status": "resolved",
+      "digest": "5a32a4af89eddda6cd51caabff9749fe37e4ce0c7854317839c7b81c90bf6627",
+      "target": "문서"
+    },
+    "O-0157": {
+      "status": "resolved",
+      "digest": "6d068323839b6cd44a8ea005ee1bbe480bf8a71acbace4597dbd5464d6e70348",
+      "target": "문서"
+    },
+    "O-0158": {
+      "status": "resolved",
+      "digest": "c4d4b3c4ed5dbae920e62347f27c38098b46723beaf8be4984966f76111ce87f",
+      "target": "문서"
+    },
+    "O-0159": {
+      "status": "resolved",
+      "digest": "abd7d459a13051e8ecdfe768d5778f319027431ae7ea16dbea806b52e7fb9139",
+      "target": "문서"
+    },
+    "O-0160": {
+      "status": "resolved",
+      "digest": "dc0dd343bf27c3cd738ec684d4a28a86d5e15e6d69d2036d088395723c6843a3",
+      "target": "문서"
+    },
+    "O-0161": {
+      "status": "resolved",
+      "digest": "5fe9ec92947b4397cc3a632a24f4e49d37b76f3bfde853caaec6756710657d53",
+      "target": "문서"
+    },
+    "O-0162": {
+      "status": "resolved",
+      "digest": "1b88787e9dbed9354507f1b26217dffc815f7c2739a8bba799cd28f65bae9bd5",
+      "target": "문서"
+    },
+    "O-0163": {
+      "status": "resolved",
+      "digest": "0dd7f9ce9e1fb0f739ed5b2ae3a4e9789a5d2d847c0357ced87bd0d77ff90fa0",
+      "target": "문서"
+    },
+    "O-0164": {
+      "status": "resolved",
+      "digest": "fc2b597587bd2d2b5653f537e4c4573933aea1910bcf56260c2cbbccdf5dacf9",
+      "target": "문서"
+    },
+    "O-0165": {
+      "status": "resolved",
+      "digest": "acee0e1edb66ac941bb6cdec5d5ec12343ce3801217b5fd73e1b50ac0d0a7c90",
+      "target": "문서"
+    },
+    "O-0166": {
+      "status": "resolved",
+      "digest": "070b2ca028c4b22df228c1dc19dd891cbe7835136807ec81f3b93d55af90e8c4",
+      "target": "문서"
+    },
+    "O-0167": {
+      "status": "open",
+      "digest": "3ba727c3cc1de015532eec00aeb4a0c6d89bc7fa37095b49e7bb500a9d34806f",
       "target": "문서"
     }
   },
-  "signature": "73163c9dd3305a4d774aae10b83024db9e8ec5198f952a98039d1380fa473218",
+  "signature": "66c43b24a382791ce3f64b09dcd0596322cdbcfe0cd664a9a4b40f76f5318754",
   "history": [
     {
-      "iteration": 1,
-      "at": "2026-08-18T16:07:36+00:00",
-      "signature": "73163c9dd3305a4d774aae10b83024db9e8ec5198f952a98039d1380fa473218",
+      "iteration": 563,
+      "at": "2026-08-19T09:32:03+00:00",
+      "signature": "008b55e729c89707f4182037256be516da2df86451845caa6c6311f12c79b529",
       "ok": true,
       "conditions": 3,
-      "open": 3,
-      "resolved_now": 0,
-      "raised_now": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
       "violations": []
+    },
+    {
+      "iteration": 564,
+      "at": "2026-08-19T09:36:45+00:00",
+      "signature": "6f25631210e929bb37d4cdd1423657df1260f26582c3b15e9078edbd82565d76",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 565,
+      "at": "2026-08-19T09:43:44+00:00",
+      "signature": "9730a576554ac72210f33c063201dc6d2cb0f3cd4bb650f76860f735dda7e98d",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 566,
+      "at": "2026-08-19T09:50:48+00:00",
+      "signature": "eadc86c01f6318b5d016d65899ff3b17cafb6c1eac43a744d85dfe923bc8e901",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 567,
+      "at": "2026-08-19T09:56:58+00:00",
+      "signature": "9e1305313978cf357d6021b16ed055f715722d238ca973c3c7f934a4962fdee7",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 568,
+      "at": "2026-08-19T10:02:08+00:00",
+      "signature": "6d8b46fa0c2692636ee576560ff552f3a0f096154e59477ee28e87cab8dadbe6",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 569,
+      "at": "2026-08-19T10:09:45+00:00",
+      "signature": "fa458e818890f5c651b74d975adea77a65cd0a320b8595e39bd76fbdcaad2bb4",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 570,
+      "at": "2026-08-19T10:16:07+00:00",
+      "signature": "fc263a854344723eea02a416499503de0ba20f8f15367bbeefd96b057ff9747f",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 571,
+      "at": "2026-08-19T10:22:15+00:00",
+      "signature": "87c83d0112c1c0deb06cbb343043931dd7f5f43708586c1764fb647ab103390a",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 572,
+      "at": "2026-08-19T10:28:12+00:00",
+      "signature": "8e987059d395e415746fbc689f2f691645e731f52628a09f032ba70ced969262",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 573,
+      "at": "2026-08-19T10:35:07+00:00",
+      "signature": "c02c27634c362fff0e1e11d0b2738567ff578dc57da9b7dc3fbfdcb7fbfcb0db",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 574,
+      "at": "2026-08-19T10:41:17+00:00",
+      "signature": "fdf8814aa80ec7a0e9e0bf834405caecb6ebc35721fa4ba90f80925224f4cf12",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 575,
+      "at": "2026-08-19T10:57:47+00:00",
+      "signature": "8049c75d27a007a0b8c8cff9c4e70f62405d5a73fc56c059ba0fc25832a531f7",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 576,
+      "at": "2026-08-19T11:06:36+00:00",
+      "signature": "c6f1bca501f32597b66ee688d1dc1c799609511aa316da7a846f6fca477c4bbe",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 577,
+      "at": "2026-08-19T11:12:21+00:00",
+      "signature": "e7b9e9d859d175d42164d301e082ee9f61a7b145bad6b58b4cf4ccc669c565fc",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 578,
+      "at": "2026-08-19T11:17:59+00:00",
+      "signature": "c90f0a032795c8d063f2c958847c76a82f3318c81c7edafdd4c77669961895c4",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 579,
+      "at": "2026-08-19T11:23:52+00:00",
+      "signature": "e0463e4930ecca379703544c59b5faaa728f88ca2ab04b4bf33c9c29d8185c9d",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 580,
+      "at": "2026-08-19T11:30:12+00:00",
+      "signature": "d87fa8ca597db0e81041a731c6e146df282d2f58ab9931c1c61de858968365bc",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 581,
+      "at": "2026-08-19T11:36:17+00:00",
+      "signature": "a908a37d53d0d0fe18d3dfa76d877cca24d8ec96c0cd028b163a2c07f47520ea",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 582,
+      "at": "2026-08-19T11:41:22+00:00",
+      "signature": "844af3a8e6e598d5c0a37621109abb18cd8633644505c2699d8bdf34ac8517f2",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 583,
+      "at": "2026-08-19T11:46:42+00:00",
+      "signature": "e82ce2f89759e3070913268e5684f1c0c7acaeba5e235863fb124e8294be21d9",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 584,
+      "at": "2026-08-19T11:51:57+00:00",
+      "signature": "0c97e9ac411dcda9a5040cfe890bf9713222b297e89a828fc39a2e3c804299ad",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 585,
+      "at": "2026-08-19T11:57:58+00:00",
+      "signature": "b9b7e96591aeb06bad3f3453ff8434ff7abb17a1459df91749fe21a9ab52610f",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 586,
+      "at": "2026-08-19T12:04:46+00:00",
+      "signature": "53860869f5f262743cdb900bd83231e061ea763f7ffcf05c757b412f7334e9e0",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 587,
+      "at": "2026-08-19T12:12:04+00:00",
+      "signature": "5d5dd7b3cb7eaf2e09a761554bcc55bfa16a9dec8dca40f49980f64f3765702b",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 588,
+      "at": "2026-08-19T12:19:44+00:00",
+      "signature": "f4afa517f934f6e6b3122eccc2f6f9208a0f9728a7d80d52c7933a5d1a5309b1",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 589,
+      "at": "2026-08-19T12:25:58+00:00",
+      "signature": "582c0d8d1ad4c73d5c0c845691705e6e16d45e42eea7f56361478ba9bae99b55",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 590,
+      "at": "2026-08-19T12:33:37+00:00",
+      "signature": "9fe90dea63f988d11685e4ccf66fcb1b4781da85b6a3e78a5b5464113e9c42aa",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 591,
+      "at": "2026-08-19T12:40:34+00:00",
+      "signature": "845490dbe698e3926e16bfc1af71fc5b51f4666a064b24ac53bcf134583ac286",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 592,
+      "at": "2026-08-19T12:47:24+00:00",
+      "signature": "d771f0a157b88683b074edc63f27233f03388e51413ce1d5bb8e11c09fc9eed0",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 593,
+      "at": "2026-08-19T12:53:53+00:00",
+      "signature": "312c1644d40507c3cc0237fc7b2b1aba7716db9c07fb21569f0ebca1241c672b",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 594,
+      "at": "2026-08-19T12:59:41+00:00",
+      "signature": "bff471ddeb2713e9f1543c1c8acecff2c4d685cff8c0c4865adfadb56add1a34",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 595,
+      "at": "2026-08-19T13:05:46+00:00",
+      "signature": "c5cb24d59cc75387a85d6da53f9f1bb6320e7834baedd08e2f29abd72cf20e99",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 596,
+      "at": "2026-08-19T13:13:02+00:00",
+      "signature": "3a649a9922db2307f1329cd97ba18daebd837ea0c1c9619a2ec3673cf563ada0",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 597,
+      "at": "2026-08-19T13:20:53+00:00",
+      "signature": "fdd57785778cf7066d1aae709d9fb79db5f1bab8a99eb65a0e498d9ff5ae397e",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 598,
+      "at": "2026-08-19T13:28:16+00:00",
+      "signature": "bdd88962351d89ff0a11af41967eaab9024bff385f72ab4599a3f62dcbf2a01b",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 599,
+      "at": "2026-08-19T13:36:48+00:00",
+      "signature": "e5d222c9f2d7384f38e5d9f8878c59467025221f091c4453f350a488ac270cf7",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 600,
+      "at": "2026-08-19T13:43:33+00:00",
+      "signature": "ab2f9f2f7b52896d84cb22ed724d049a59ef8acca2fa39e3479aafacd910a1f1",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 601,
+      "at": "2026-08-19T13:51:48+00:00",
+      "signature": "625d88a14f62a5c441b2dda3800f76d85f97f438712c7c75a22f682e22004a2d",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 602,
+      "at": "2026-08-19T13:58:24+00:00",
+      "signature": "7aca60893729977af02f334426bbc37dbfdbd502be1d820b29369ee9b5708bc7",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 603,
+      "at": "2026-08-19T14:05:07+00:00",
+      "signature": "0b1da5c0a75e2c2e537f9de260dfc7f297e90fe1d1d531260085e3ecc6aee4bc",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 604,
+      "at": "2026-08-19T14:11:40+00:00",
+      "signature": "4e192d44c479586a47f2063aa6badbb34670a64ac741288bd30f9c4df9f8a107",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 605,
+      "at": "2026-08-19T14:18:07+00:00",
+      "signature": "27897573770a3a400645613d42971f658ce56ab74ca323f8d86a6e772813c2e7",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 606,
+      "at": "2026-08-19T14:24:35+00:00",
+      "signature": "079ac57799858006595a126d13806c9c5e1236dae8d90272620d6402e79eb012",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 607,
+      "at": "2026-08-19T14:31:44+00:00",
+      "signature": "95925f147e54624e0db98f6e97d1562fafb4afa48e129ff143f1335ff52b4730",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 608,
+      "at": "2026-08-19T14:38:53+00:00",
+      "signature": "b48e84224b39730daedce1eeb43d2b40508a4d4b7a938d65caeeb658b1c3a450",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 609,
+      "at": "2026-08-19T14:45:58+00:00",
+      "signature": "66c43b24a382791ce3f64b09dcd0596322cdbcfe0cd664a9a4b40f76f5318754",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": []
+    },
+    {
+      "iteration": 610,
+      "at": "2026-08-19T14:52:50+00:00",
+      "signature": "66c43b24a382791ce3f64b09dcd0596322cdbcfe0cd664a9a4b40f76f5318754",
+      "ok": false,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 0,
+      "raised_now": 0,
+      "violations": [
+        "R3",
+        "R4",
+        "R7",
+        "R11"
+      ],
+      "resolved_ids": [],
+      "raised_ids": [],
+      "superseded_ids": [],
+      "changed_ids": [],
+      "size": 302010,
+      "over_budget": [
+        "서문 229394자 > 4000자",
+        "C-001 27551자 > 6000자",
+        "C-002 44332자 > 6000자"
+      ]
+    },
+    {
+      "iteration": 611,
+      "at": "2026-08-19T14:54:16+00:00",
+      "signature": "66c43b24a382791ce3f64b09dcd0596322cdbcfe0cd664a9a4b40f76f5318754",
+      "ok": false,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 0,
+      "raised_now": 0,
+      "violations": [
+        "R3",
+        "R4",
+        "R7",
+        "R11"
+      ],
+      "resolved_ids": [],
+      "raised_ids": [],
+      "superseded_ids": [],
+      "changed_ids": [],
+      "size": 302010,
+      "over_budget": [
+        "서문 229394자 > 4000자",
+        "C-001 27551자 > 6000자",
+        "C-002 44332자 > 6000자"
+      ]
+    },
+    {
+      "iteration": 612,
+      "at": "2026-08-19T14:58:31+00:00",
+      "signature": "66c43b24a382791ce3f64b09dcd0596322cdbcfe0cd664a9a4b40f76f5318754",
+      "ok": false,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 0,
+      "raised_now": 0,
+      "violations": [
+        "R3",
+        "R4",
+        "R7",
+        "R11"
+      ],
+      "resolved_ids": [],
+      "raised_ids": [],
+      "superseded_ids": [],
+      "changed_ids": [],
+      "size": 302010,
+      "over_budget": [
+        "서문 229394자 > 4000자",
+        "C-001 27551자 > 6000자",
+        "C-002 44332자 > 6000자"
+      ]
     }
   ]
 }
