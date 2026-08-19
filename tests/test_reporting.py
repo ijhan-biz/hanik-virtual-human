@@ -32,7 +32,8 @@ def _review(previous_size: int | None) -> Review:
         superseded_now=(),
         changed_conditions=("C-001",),
         resolve_first=False,
-        over_budget=(),
+        size=2547,
+        budget=100_000,
         previous_size=previous_size,
     )
 

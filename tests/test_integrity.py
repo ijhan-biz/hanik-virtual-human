@@ -400,17 +400,16 @@ def test_R5_문서_반론은_조건_하나_변경에_딸려_해소되지_않는�
     assert "딸려 해소될 수는 없다" in _rule(outcome, "R5").evidence
 
 
-def _budgeted(monkeypatch, condition: int = 300, preamble: int = 4000) -> None:
-    monkeypatch.setenv("HANIK_CONDITION_BUDGET", str(condition))
-    monkeypatch.setenv("HANIK_PREAMBLE_BUDGET", str(preamble))
+def _budgeted(monkeypatch, document: int = 500) -> None:
+    monkeypatch.setenv("HANIK_DOCUMENT_BUDGET", str(document))
 
 
 def test_R13_예산_안이면_통과한다(repository: Path, monkeypatch) -> None:
-    _budgeted(monkeypatch, condition=20000)
+    _budgeted(monkeypatch, document=100_000)
     outcome = _review(repository, _accepted(repository))
     assert _rule(outcome, "R13").passed
-    assert not outcome.over_budget
     assert not outcome.consolidating
+    assert outcome.overage == 0
 
 
 def test_R13_예산을_넘겼는데_늘어나면_위반이다(repository: Path, monkeypatch) -> None:
@@ -422,7 +421,7 @@ def test_R13_예산을_넘겼는데_늘어나면_위반이다(repository: Path, 
     outcome = _review(repository, previous)
     assert not _rule(outcome, "R13").passed
     assert outcome.consolidating
-    assert "C-001" in _rule(outcome, "R13").evidence
+    assert "큰 구획부터" in _rule(outcome, "R13").evidence
 
 
 def test_R13_예산을_넘겨도_줄어들면_통과한다(repository: Path, monkeypatch) -> None:
@@ -440,8 +439,26 @@ def test_R13_예산을_넘겨도_줄어들면_통과한다(repository: Path, mon
     assert "줄었다" in _rule(outcome, "R13").evidence
 
 
+def test_R13_한_구획이_커도_문서가_예산_안이면_묻지_않는다(
+    repository: Path, monkeypatch
+) -> None:
+    """예산은 문서 전체에 걸린다. 한 조건이 유난히 긴 것은 그 자체로 위반이 아니다.
+
+    어디에 분량을 쓸지는 탐구의 몫이다. 한 조건이 어려워 길어지고 그 대가로
+    다른 조건이 짧아지는 배분을 규칙이 대신 정해서는 안 된다.
+    """
+    _budgeted(monkeypatch, document=100_000)
+    previous = _accepted(repository)
+    (repository / "Hanik.md").write_text(
+        document_text([condition_block(grounds=filler("C-001 근거", 5000))]), encoding="utf-8"
+    )
+    outcome = _review(repository, previous)
+    assert _rule(outcome, "R13").passed
+    assert not outcome.consolidating
+
+
 def test_R13_첫_반복은_면제된다(repository: Path, monkeypatch) -> None:
-    _budgeted(monkeypatch, condition=10)
+    _budgeted(monkeypatch, document=10)
     outcome = _review(repository, State())
     assert _rule(outcome, "R13").exempt
 
@@ -508,3 +525,43 @@ def test_R14_분량을_맞추려_조건을_지우는_길을_막는다(tmp_path: 
     outcome = _review(tmp_path, previous)
     assert _rule(outcome, "R13").passed, "지웠으니 분량은 줄었다"
     assert not _rule(outcome, "R14").passed, "그러나 삭제는 정리가 아니다"
+
+
+def test_R13_예산은_개정_이력까지_센다(repository: Path, monkeypatch) -> None:
+    """개정은 반복마다 한 줄씩 쌓이므로 예산 밖에 두면 무한히 자란다.
+
+    R5가 개정을 실질에서 빼는 것은 개정 줄만 고쳐 변경을 위장하는 것을 막기
+    위해서다. 그 이유는 예산에는 해당하지 않는다 — 읽는 사람에게 개정 이력은
+    다른 문장과 똑같이 읽어야 할 글이다.
+    """
+    _budgeted(monkeypatch, document=900)
+    previous = _accepted(repository)
+    (repository / "Hanik.md").write_text(
+        document_text([condition_block(revision=filler("반복 0002에서 재작성", 900))]),
+        encoding="utf-8",
+    )
+    outcome = _review(repository, previous)
+    assert outcome.consolidating, "개정만 부풀어도 예산을 넘는다"
+    assert not _rule(outcome, "R13").passed
+
+
+def test_R13_개정을_쳐내면_정리로_인정된다(repository: Path, monkeypatch) -> None:
+    """개정을 예산에 넣었으므로 그것을 줄이는 것도 정리다.
+
+    기록이 사라지지는 않는다. 반복마다의 변경은 reports/와 state/ledger.json에
+    잘리지 않고 남는다. 문서 안의 개정 줄은 그 기록의 사본이지 원본이 아니다.
+    """
+    _budgeted(monkeypatch, document=500)
+    (repository / "Hanik.md").write_text(
+        document_text([condition_block(revision=filler("반복 0002에서 재작성", 900))]),
+        encoding="utf-8",
+    )
+    previous = _accepted(repository)
+    (repository / "Hanik.md").write_text(
+        document_text([condition_block(revision="반복 0003에서 오래된 개정 이력을 쳐냈다.")]),
+        encoding="utf-8",
+    )
+    outcome = _review(repository, previous)
+    assert _rule(outcome, "R13").passed
+    assert outcome.consolidating, "아직 예산은 넘지만 줄었으므로 통과한다"
+    assert "줄었다" in _rule(outcome, "R13").evidence

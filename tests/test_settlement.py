@@ -62,8 +62,9 @@ def test_결산은_예산_초과를_숨기지_않는다(tmp_path: Path) -> None:
     build_repository(
         tmp_path, conditions=[condition_block("C-001", "체현", grounds=filler("C-001 근거", 900))]
     )
-    settlement = _settle(tmp_path, condition_budget_override=300, preamble_budget_override=4000)
-    assert settlement.over_budget == ("C-001",)
+    settlement = _settle(tmp_path, budget_override=300)
+    assert settlement.over_budget
+    assert settlement.overage > 0
     rendered = render_settlement(settlement)
     assert "정리 모드" in rendered
     assert "초과" in rendered
@@ -71,9 +72,25 @@ def test_결산은_예산_초과를_숨기지_않는다(tmp_path: Path) -> None:
 
 def test_결산은_예산_안이면_정리를_요구하지_않는다(tmp_path: Path) -> None:
     build_repository(tmp_path)
-    settlement = _settle(tmp_path, condition_budget_override=20000)
-    assert settlement.over_budget == ()
+    settlement = _settle(tmp_path, budget_override=100_000)
+    assert not settlement.over_budget
+    assert settlement.overage == 0
     assert "정리 모드" not in render_settlement(settlement)
+
+
+def test_결산은_구획별로_위반을_선고하지_않는다(tmp_path: Path) -> None:
+    """예산은 문서 전체에 걸린다. 몫은 보이되 구획을 초과라고 부르지 않는다."""
+    build_repository(
+        tmp_path,
+        conditions=[
+            condition_block("C-001", "체현", grounds=filler("C-001 근거", 900)),
+            condition_block("C-002", "유한성"),
+        ],
+    )
+    settlement = _settle(tmp_path, budget_override=100_000)
+    rendered = render_settlement(settlement)
+    assert "문서에서의 몫" in rendered
+    assert "초과" not in rendered
 
 
 def test_결산은_미해결_반론이_없으면_R8_위반이라고_적는다(tmp_path: Path) -> None:

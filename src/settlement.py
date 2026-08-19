@@ -32,7 +32,7 @@ from typing import Any
 
 from . import text as textutil
 from .document import Document, condition_size
-from .integrity import condition_budget, preamble_budget
+from .integrity import document_budget
 from .objections import Backlog, Objection
 
 SETTLEMENT_NAME = "SUMMARY.md"
@@ -74,13 +74,14 @@ class ConditionSummary:
     limits_truncated: bool
     evidence_excerpt: str
     size: int
-    budget: int
+    revision_size: int
     shaped_by: tuple[str, ...]
     open_questions: tuple[str, ...]
 
     @property
-    def over_budget(self) -> bool:
-        return self.size > self.budget
+    def read_size(self) -> int:
+        """읽는 사람이 읽어야 하는 분량. 예산과 같은 잣대다."""
+        return self.size + self.revision_size
 
 
 @dataclass(frozen=True)
@@ -92,7 +93,7 @@ class Settlement:
     conditions: tuple[ConditionSummary, ...]
     preamble_excerpt: str
     preamble_size: int
-    preamble_budget: int
+    budget: int
     open_objections: tuple[Objection, ...]
     resolved_count: int
     superseded_count: int
@@ -100,16 +101,23 @@ class Settlement:
     passed_run: int
 
     @property
-    def total_size(self) -> int:
+    def substance_size(self) -> int:
+        """개정을 뺀 실질 분량."""
         return self.preamble_size + sum(c.size for c in self.conditions)
 
     @property
-    def over_budget(self) -> tuple[str, ...]:
-        names = []
-        if self.preamble_size > self.preamble_budget:
-            names.append("서문")
-        names += [c.identifier for c in self.conditions if c.over_budget]
-        return tuple(names)
+    def total_size(self) -> int:
+        """예산이 재는 분량. 개정 이력까지 센다."""
+        return self.preamble_size + sum(c.read_size for c in self.conditions)
+
+    @property
+    def over_budget(self) -> bool:
+        """문서 전체가 예산을 넘었는가. 구획별 판정은 없다."""
+        return self.total_size > self.budget
+
+    @property
+    def overage(self) -> int:
+        return max(0, self.total_size - self.budget)
 
 
 def _shaping_objections(
@@ -143,12 +151,10 @@ def settle(
     backlog: Backlog,
     iteration: int,
     ledger: list[dict[str, Any]] | None = None,
-    condition_budget_override: int = 0,
-    preamble_budget_override: int = 0,
+    budget_override: int = 0,
 ) -> Settlement:
     """현재 저장소에서 결산을 만든다. 판단하지 않고 추리기만 한다."""
-    c_budget = condition_budget_override or condition_budget()
-    p_budget = preamble_budget_override or preamble_budget()
+    budget = budget_override or document_budget()
     entries = ledger or []
 
     summaries = []
@@ -170,7 +176,7 @@ def settle(
                 limits_truncated=limits_cut,
                 evidence_excerpt=evidence,
                 size=condition_size(condition),
-                budget=c_budget,
+                revision_size=textutil.visible_length(condition.field("개정")),
                 shaped_by=shaped,
                 open_questions=pending,
             )
@@ -183,7 +189,7 @@ def settle(
         conditions=tuple(summaries),
         preamble_excerpt=preamble_excerpt,
         preamble_size=textutil.visible_length(document.preamble),
-        preamble_budget=p_budget,
+        budget=budget,
         open_objections=tuple(
             sorted(backlog.open_items, key=lambda o: o.identifier)
         ),
@@ -270,25 +276,37 @@ def render_settlement(settlement: Settlement) -> str:
         "읽을 수 있는 크기의 상한이다."
     )
     lines.append("")
-    lines.append("| 구획 | 실질 분량 | 예산 | 상태 |")
-    lines.append("| --- | --- | --- | --- |")
-    preamble_state = (
-        "초과" if settlement.preamble_size > settlement.preamble_budget else "이내"
-    )
     lines.append(
-        f"| 서문 | {settlement.preamble_size}자 | {settlement.preamble_budget}자 | {preamble_state} |"
+        "예산은 문서 전체에 걸린다. 어디에 분량을 쓸지는 탐구의 몫이므로 구획마다 "
+        "상한을 두지 않는다. 아래의 몫은 어느 구획이 문서를 차지하고 있는지 보일 뿐 "
+        "그 자체로 위반이 아니다."
+    )
+    lines.append("")
+    total = settlement.total_size or 1
+    lines.append("| 구획 | 실질 분량 | 개정 이력 | 문서에서의 몫 |")
+    lines.append("| --- | --- | --- | --- |")
+    lines.append(
+        f"| 서문 | {settlement.preamble_size}자 | — | "
+        f"{settlement.preamble_size / total:.0%} |"
     )
     for summary in settlement.conditions:
-        state = "초과" if summary.over_budget else "이내"
         lines.append(
-            f"| {summary.identifier} | {summary.size}자 | {summary.budget}자 | {state} |"
+            f"| {summary.identifier} | {summary.size}자 | {summary.revision_size}자 | "
+            f"{summary.read_size / total:.0%} |"
         )
-    lines.append(f"| **합계** | **{settlement.total_size}자** | — | — |")
+    state = "초과" if settlement.over_budget else "이내"
+    revisions = sum(c.revision_size for c in settlement.conditions)
+    lines.append(
+        f"| **합계** | **{settlement.substance_size}자** | **{revisions}자** | "
+        f"**{settlement.total_size}자 / 예산 {settlement.budget}자 {state}** |"
+    )
     lines.append("")
     if settlement.over_budget:
         lines.append(
-            f"**예산을 넘긴 구획: {', '.join(settlement.over_budget)}.** 다음 반복은 "
-            "정리 모드다. 새 문장을 더하기 전에 이 구획을 줄여야 R13을 통과한다."
+            f"**문서가 예산을 {settlement.overage}자 넘었다.** 다음 반복은 정리 모드다. "
+            "새 문장을 더하기 전에 문서를 줄여야 R13을 통과한다. 어느 구획을 줄일지는 "
+            "정해져 있지 않다 — 한 조건이 어려워 길어지는 것은 정당할 수 있고, 그 "
+            "대가로 다른 조건을 줄이는 것도 정당하다."
         )
         lines.append("")
 
@@ -361,8 +379,9 @@ def render_sessions(ledger: list[dict[str, Any]], limit: int = 40) -> str:
         lines.append(f"- 바뀐 조건: {_ids(entry, 'changed_ids', 'changed_now')}")
         size = entry.get("size")
         if isinstance(size, int):
-            over = entry.get("over_budget") or []
-            suffix = f" (예산 초과: {', '.join(over)})" if over else ""
+            budget = entry.get("budget")
+            over = isinstance(budget, int) and size > budget
+            suffix = f" (예산 {budget}자를 {size - budget}자 넘음)" if over else ""
             lines.append(f"- 실질 분량: {size}자{suffix}")
         lines.append(f"- 미해결 반론: {entry.get('open', 0)}개")
         lines.append("")

@@ -75,7 +75,7 @@ def run(root: Path | None = None) -> int:
         "superseded_ids": list(outcome.superseded_now),
         "changed_ids": list(outcome.changed_conditions),
         "size": metrics.substance_length,
-        "over_budget": list(outcome.over_budget),
+        "budget": outcome.budget,
     }
     state.history.append(entry)
     ledger.append(entry)
@@ -130,12 +130,18 @@ def _print_summary(
         f"  조건 {metrics.conditions}개 / 미해결 반론 {metrics.open_objections}개 / "
         f"이번 해소 {metrics.resolved_now}개 / 이번 제기 {metrics.raised_now}개"
     )
-    print(f"  실질 분량 {metrics.substance_length}자{_size_delta(outcome, metrics)}")
+    print(
+        f"  문서 분량 {metrics.document_length}자 / 예산 {outcome.budget}자"
+        f"{_size_delta(outcome, metrics)}"
+    )
     cut = large_cut(outcome, metrics)
     if cut is not None:
         print(f"  대량 삭감 — 실질 분량의 {cut:.0%}가 사라졌다. git diff로 확인하라.")
-    if outcome.over_budget:
-        print(f"  정리 모드 — 예산 초과: {', '.join(outcome.over_budget)}")
+    if outcome.consolidating:
+        print(
+            f"  정리 모드 — 문서가 예산을 {outcome.overage}자 넘었다"
+            f" ({outcome.size}자 / {outcome.budget}자)"
+        )
     for result in outcome.violations:
         print(f"  [{result.identifier}] {result.title} — {result.evidence}")
     print(f"  보고서: {relative}")

@@ -16,8 +16,8 @@ from pathlib import Path
 
 from . import text as textutil
 from .conclusion import CONTINUE, Conclusion
-from .document import REQUIRED_FIELDS, Document, condition_size, document_size
-from .integrity import Review, condition_budget
+from .document import Document, condition_size, document_size, full_size
+from .integrity import Review, largest_sections
 from .objections import Backlog, Objection
 
 REPORT_PREFIX = "iteration-"
@@ -42,11 +42,8 @@ class Metrics:
 
 
 def measure(document: Document, backlog: Backlog, review: Review) -> Metrics:
-    length = textutil.visible_length(document.preamble) + sum(
-        textutil.visible_length(condition.field(name))
-        for condition in document.conditions
-        for name in REQUIRED_FIELDS
-    )
+    # 예산과 같은 잣대다. '개정'까지 세는 것은 읽는 사람이 그것도 읽기 때문이다.
+    length = full_size(document)
     return Metrics(
         conditions=len(document.conditions),
         document_length=length,
@@ -67,18 +64,19 @@ LARGE_CUT = 0.5
 
 
 def _delta(review: Review, metrics: Metrics) -> str:
+    """직전 반복과의 분량 차이. 예산과 같은 잣대(개정 포함)로 잰다."""
     before = review.previous_size
-    if before is None or before == metrics.substance_length:
+    if before is None or before == metrics.document_length:
         return ""
-    return f" (직전 {before}자에서 {metrics.substance_length - before:+d}자)"
+    return f" (직전 {before}자에서 {metrics.document_length - before:+d}자)"
 
 
 def large_cut(review: Review, metrics: Metrics) -> float | None:
-    """이번 반복이 실질 분량을 크게 덜어냈으면 그 비율. 아니면 None."""
+    """이번 반복이 분량을 크게 덜어냈으면 그 비율. 아니면 None."""
     before = review.previous_size
-    if not before or metrics.substance_length >= before:
+    if not before or metrics.document_length >= before:
         return None
-    removed = (before - metrics.substance_length) / before
+    removed = (before - metrics.document_length) / before
     return removed if removed >= LARGE_CUT else None
 
 
@@ -153,8 +151,11 @@ def render_report(
     lines.append("| 항목 | 값 |")
     lines.append("| --- | --- |")
     lines.append(f"| 조건 수 | {metrics.conditions} |")
-    lines.append(f"| 문서 분량(공백 제외) | {metrics.document_length}자 |")
-    lines.append(f"| 실질 분량(개정 제외) | {metrics.substance_length}자{_delta(review, metrics)} |")
+    lines.append(
+        f"| 문서 분량(공백 제외) | {metrics.document_length}자{_delta(review, metrics)} |"
+    )
+    lines.append(f"| 예산 | {review.budget}자 |")
+    lines.append(f"| 실질 분량(개정 제외) | {metrics.substance_length}자 |")
     lines.append(f"| 미해결 반론 | {metrics.open_objections} |")
     lines.append(f"| 누적 해소 반론 | {metrics.resolved_objections} |")
     lines.append(f"| 이번에 바뀐 조건 | {metrics.changed_conditions} |")
@@ -166,7 +167,7 @@ def render_report(
     lines.append("")
     cut = large_cut(review, metrics)
     if cut is not None:
-        lines.append(f"> **이번 반복이 실질 분량의 {cut:.0%}를 덜어냈다.**")
+        lines.append(f"> **이번 반복이 문서의 {cut:.0%}를 덜어냈다.**")
         lines.append(">")
         lines.append(
             "> 규칙은 이것을 막지 않는다. R13은 분량이 줄었다는 것까지만 알고, 무엇이"
@@ -183,8 +184,8 @@ def render_report(
         lines.append("- 미해결 반론이 상한에 이르러 **해소 우선** 모드다. 새 반론 제기 의무가 면제된다.")
     if review.consolidating:
         lines.append(
-            f"- 예산을 넘긴 구획이 있어 **정리 모드**다: {', '.join(review.over_budget)}. "
-            "문서가 줄어야 R13을 통과한다."
+            f"- 문서가 예산을 {review.overage}자 넘어 **정리 모드**다"
+            f"({review.size}자 / {review.budget}자). 문서가 줄어야 R13을 통과한다."
         )
     lines.append("")
 
@@ -199,16 +200,23 @@ def render_report(
 
     lines.append("## 조건")
     lines.append("")
-    lines.append("| 조건 | 제목 | 실질 분량 | 예산 | 개정 |")
+    lines.append("| 조건 | 제목 | 실질 분량 | 문서에서의 몫 | 개정 |")
     lines.append("| --- | --- | --- | --- | --- |")
-    budget = condition_budget()
+    total = metrics.document_length or 1
     for condition in document.conditions:
         size = condition_size(condition)
+        revision_size = textutil.visible_length(condition.field("개정"))
         revision = " ".join(condition.field("개정").split()).replace("|", "\\|")
-        state = "초과" if size > budget else "이내"
         lines.append(
-            f"| {condition.identifier} | {condition.title} | {size}자 | {state} | {revision} |"
+            f"| {condition.identifier} | {condition.title} | {size}자 | "
+            f"{(size + revision_size) / total:.0%} | {revision} |"
         )
+    lines.append("")
+    lines.append(
+        "예산은 문서 전체에 걸린다. 어디에 분량을 쓸지는 탐구의 몫이므로 조건마다 "
+        "상한을 두지 않는다. 몫은 어느 조건이 문서를 차지하고 있는지 보여줄 뿐 "
+        "그 자체로 위반이 아니다."
+    )
     lines.append("")
 
     lines.append("## 미해결 반론")
@@ -287,14 +295,20 @@ def render_brief(
 
     lines.append(f"- 직전 반복 결과: **{'통과' if review.ok else '위반'}**")
     lines.append(f"- 조건 {metrics.conditions}개, 미해결 반론 {metrics.open_objections}개")
-    lines.append(f"- 실질 분량 {metrics.substance_length}자{_delta(review, metrics)}")
+    lines.append(
+        f"- 문서 분량 {metrics.document_length}자 / 예산 {review.budget}자"
+        f"{_delta(review, metrics)}"
+    )
     lines.append(f"- 모드: {'해소 우선 — 새 반론을 제기하지 않아도 된다' if review.resolve_first else '보통 — 해소 하나, 제기 하나'}")
     if review.consolidating:
-        lines.append(f"- **정리 모드** — 예산 초과: {', '.join(review.over_budget)}")
+        lines.append(
+            f"- **정리 모드** — 문서가 예산을 {review.overage}자 넘었다"
+            f"({review.size}자 / {review.budget}자)"
+        )
     cut = large_cut(review, metrics)
     if cut is not None:
         lines.append(
-            f"- **직전 반복이 실질 분량의 {cut:.0%}를 덜어냈다.** 이어서 더 줄이기 전에,"
+            f"- **직전 반복이 문서의 {cut:.0%}를 덜어냈다.** 이어서 더 줄이기 전에,"
             " 사라진 것 가운데 되살려야 할 논증이 있는지 `git diff`로 먼저 확인하라."
         )
     lines.append("")
@@ -303,12 +317,20 @@ def render_brief(
         lines.append("## 먼저: 정리한다")
         lines.append("")
         lines.append(
-            "예산을 넘긴 구획이 있다. 이번 반복은 문서가 **줄어들어야** R13을 통과한다. "
+            f"문서가 예산을 **{review.overage}자** 넘었다({review.size}자 / "
+            f"{review.budget}자). 이번 반복은 문서가 **줄어들어야** R13을 통과한다. "
             "덧붙이는 방식으로는 통과할 수 없다."
         )
         lines.append("")
-        for item in review.over_budget:
-            lines.append(f"- {item}")
+        largest = largest_sections(document)
+        if largest:
+            lines.append(f"큰 구획부터: {', '.join(largest)}.")
+            lines.append("")
+        lines.append(
+            "어느 구획을 줄일지는 정해져 있지 않다. 예산은 문서 전체에 걸리므로 "
+            "한 조건이 어려워 길어지는 것은 정당할 수 있고, 그 대가로 다른 조건을 "
+            "줄이는 것도 정당하다."
+        )
         lines.append("")
         lines.append("정리는 삭제가 아니다. 다음 순서로 한다.")
         lines.append("")
@@ -376,7 +398,7 @@ def render_brief(
     lines.append("  `superseded`로 은퇴시키고 비판을 넘겨받을 반론을 `해소`에 적어라. 은퇴는 해소로 세지 않는다.")
     lines.append("- **규칙을 고쳐 통과시키지 마라.** `src/integrity.py`를 무르게 만드는 것은 루프가 잡지 못한다.")
     lines.append("  사람 리뷰만이 막을 수 있고, 그래서 이것이 여기 적혀 있다.")
-    lines.append("- **예산을 늘려 정리를 피하지 마라.** `HANIK_CONDITION_BUDGET`을 올리는 것은")
+    lines.append("- **예산을 늘려 정리를 피하지 마라.** `HANIK_DOCUMENT_BUDGET`을 올리는 것은")
     lines.append("  R13을 무르게 만드는 것과 같다. 읽을 수 없는 문서는 쓰이지 않은 문서다.")
     lines.append("- `SUMMARY.md`와 `state/sessions.md`는 생성물이다. 손으로 고치지 마라.")
     lines.append("- 전체 계약은 `AGENTS.md`에 있다.")

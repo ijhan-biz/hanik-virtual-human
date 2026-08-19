@@ -74,9 +74,29 @@ def condition_size(condition: Condition) -> int:
 
 
 def document_size(document: "Document") -> int:
-    """서문과 모든 조건의 실질 분량 합계."""
+    """서문과 모든 조건의 실질 분량 합계. '개정'은 세지 않는다."""
     return textutil.visible_length(document.preamble) + sum(
         condition_size(condition) for condition in document.conditions
+    )
+
+
+def full_size(document: "Document") -> int:
+    """읽는 사람이 실제로 읽어야 하는 분량. '개정' 이력까지 센다.
+
+    분량 예산이 재는 것은 이쪽이다. `document_size`가 '개정'을 빼는 것은 개정
+    줄만 고쳐 변경을 위장하는 것을 막기 위해서인데(R5), 그 이유는 예산에는
+    해당하지 않는다. 읽는 사람에게 개정 이력은 다른 문장과 똑같이 읽어야 할
+    글이고, 반복마다 한 줄씩 쌓이므로 놔두면 문서에서 가장 빨리 자라는 자리가
+    된다.
+
+    개정을 예산에 넣으면 오래된 이력을 쳐낼 유인이 생긴다. 그래도 기록이
+    사라지지는 않는다 — 반복마다의 변경은 `reports/`와 `state/ledger.json`에
+    잘리지 않고 남는다. 문서 안의 개정 줄은 그 기록의 사본이지 원본이 아니다.
+    """
+    return textutil.visible_length(document.preamble) + sum(
+        textutil.visible_length(condition.field(name))
+        for condition in document.conditions
+        for name in REQUIRED_FIELDS
     )
 
 

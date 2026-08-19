@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from . import text as textutil
-from .document import REQUIRED_FIELDS, Document, condition_size, document_size
+from .document import REQUIRED_FIELDS, Document, condition_size, document_size, full_size
 from .objections import Backlog, Objection
 from .state import State
 
@@ -43,15 +43,14 @@ MAX_DUPLICATION = 0.15
 #: 미해결 반론이 이만큼 쌓이면 새 반론 제기 의무(R7)를 면제하고 해소를 우선한다.
 DEFAULT_OPEN_LIMIT = 12
 
-#: 조건 하나가 실질(주장·근거·한계)로 가질 수 있는 글자 수 상한.
-#: 품질 기준이 아니라 사람이 읽어낼 수 있는 크기의 상한이다. R2의 최소 분량
-#: 합계(480자)의 열 배를 넘게 잡았으므로, 이 선에 닿는 조건은 이미 한 번
-#: 추려낼 때가 된 것이다.
-DEFAULT_CONDITION_BUDGET = 6000
-
-#: 서문이 가질 수 있는 글자 수 상한. 서문은 조건이 아니므로 R2도 R10도 보지
-#: 않는다. 예산이 없으면 분량이 가장 먼저 흘러드는 자리가 여기다.
-DEFAULT_PREAMBLE_BUDGET = 4000
+#: 문서 전체(서문 + 모든 조건의 주장·근거·한계)가 가질 수 있는 글자 수 상한.
+#: 품질 기준이 아니라 사람이 읽어낼 수 있는 크기의 상한이다.
+#:
+#: 예산을 구획별이 아니라 문서 전체에 두는 것은 어디에 분량을 쓸지가 탐구의
+#: 몫이기 때문이다. 한 조건이 유난히 어려워 길어지는 것은 정당할 수 있고,
+#: 그 대가로 다른 조건이 짧아지는 것도 정당하다. 구획마다 상한을 두면 이
+#: 배분을 규칙이 대신 정해버린다. 규칙이 정해야 하는 것은 총량뿐이다.
+DEFAULT_DOCUMENT_BUDGET = 100_000
 
 
 def open_limit(environ: dict[str, str] | None = None) -> int:
@@ -72,12 +71,8 @@ def _budget(name: str, fallback: int, environ: dict[str, str] | None = None) -> 
     return value if value > 0 else fallback
 
 
-def condition_budget(environ: dict[str, str] | None = None) -> int:
-    return _budget("HANIK_CONDITION_BUDGET", DEFAULT_CONDITION_BUDGET, environ)
-
-
-def preamble_budget(environ: dict[str, str] | None = None) -> int:
-    return _budget("HANIK_PREAMBLE_BUDGET", DEFAULT_PREAMBLE_BUDGET, environ)
+def document_budget(environ: dict[str, str] | None = None) -> int:
+    return _budget("HANIK_DOCUMENT_BUDGET", DEFAULT_DOCUMENT_BUDGET, environ)
 
 
 @dataclass(frozen=True)
@@ -108,13 +103,19 @@ class Review:
     superseded_now: tuple[str, ...]
     changed_conditions: tuple[str, ...]
     resolve_first: bool
-    over_budget: tuple[str, ...] = ()
+    size: int = 0
+    budget: int = 0
     previous_size: int | None = None
 
     @property
     def consolidating(self) -> bool:
-        """정리 모드인가. 예산을 넘긴 구획이 있으면 문서는 줄어야 한다."""
-        return bool(self.over_budget)
+        """정리 모드인가. 문서가 예산을 넘으면 다음 반복은 줄여야 한다."""
+        return self.budget > 0 and self.size > self.budget
+
+    @property
+    def overage(self) -> int:
+        """예산을 넘긴 글자 수. 예산 안이면 0이다."""
+        return max(0, self.size - self.budget) if self.budget > 0 else 0
 
     @property
     def ok(self) -> bool:
@@ -235,17 +236,22 @@ def _duplication(document: Document) -> tuple[float, str]:
     return worst, detail
 
 
-def _over_budget(document: Document, condition_bound: int, preamble_bound: int) -> tuple[str, ...]:
-    """예산을 넘긴 구획의 이름과 초과량."""
-    over: list[str] = []
-    preamble_length = textutil.visible_length(document.preamble)
-    if preamble_length > preamble_bound:
-        over.append(f"서문 {preamble_length}자 > {preamble_bound}자")
-    for condition in document.conditions:
-        size = condition_size(condition)
-        if size > condition_bound:
-            over.append(f"{condition.identifier} {size}자 > {condition_bound}자")
-    return tuple(over)
+def largest_sections(document: Document, count: int = 3) -> tuple[str, ...]:
+    """분량이 큰 구획부터. 정리할 때 어디를 먼저 볼지 알려준다.
+
+    예산은 문서 전체에 걸리므로 어느 구획이 '위반'인지는 정해지지 않는다.
+    그래도 줄일 곳을 찾는 사람에게는 큰 구획부터 보는 것이 자연스럽다.
+    """
+    sizes = [("서문", textutil.visible_length(document.preamble))]
+    sizes += [
+        (
+            c.identifier,
+            sum(textutil.visible_length(c.field(name)) for name in REQUIRED_FIELDS),
+        )
+        for c in document.conditions
+    ]
+    sizes.sort(key=lambda pair: -pair[1])
+    return tuple(f"{name} {size}자" for name, size in sizes[:count] if size > 0)
 
 
 def _absorbed_by(identifier: str, document: Document) -> str | None:
@@ -449,34 +455,37 @@ def review(
     )
 
     # R13
-    condition_bound = condition_budget()
-    preamble_bound = preamble_budget()
-    over = _over_budget(document, condition_bound, preamble_bound)
-    current_size = document_size(document)
-    previous_size = previous.document.get("length")
-    if not over:
+    bound = document_budget()
+    current_size = full_size(document)
+    previous_size = previous.document.get("full")
+    over_by = current_size - bound
+    if over_by <= 0:
         r13_ok = True
         r13_evidence = (
-            f"모든 구획이 예산 안에 있다(합계 {current_size}자, 조건 상한 "
-            f"{condition_bound}자, 서문 상한 {preamble_bound}자)."
+            f"문서가 예산 안에 있다({current_size}자 / {bound}자, "
+            f"{bound - current_size}자 남음)."
         )
     elif not isinstance(previous_size, int):
         r13_ok = True
-        r13_evidence = f"예산을 넘긴 구획이 있으나 비교할 직전 분량이 없다: {', '.join(over)}."
+        r13_evidence = (
+            f"문서가 예산을 {over_by}자 넘었으나({current_size}자 / {bound}자) "
+            "비교할 직전 분량이 없다."
+        )
     elif current_size < previous_size:
         r13_ok = True
         r13_evidence = (
             f"정리 모드다. 분량이 {previous_size}자에서 {current_size}자로 "
-            f"{previous_size - current_size}자 줄었다. 남은 초과: {', '.join(over)}."
+            f"{previous_size - current_size}자 줄었다. 예산까지 {over_by}자 남았다."
         )
     else:
         r13_ok = False
         r13_evidence = (
-            f"예산을 넘긴 구획이 있는데 문서가 줄지 않았다({previous_size}자 → "
-            f"{current_size}자). 초과: {', '.join(over)}. 새 문장을 더하기 전에 "
+            f"문서가 예산을 {over_by}자 넘었는데({previous_size}자 → {current_size}자 / "
+            f"{bound}자) 줄지 않았다. 큰 구획부터: "
+            f"{', '.join(largest_sections(document))}. 새 문장을 더하기 전에 "
             "덜어내라. 읽히지 않는 문서는 쓰이지 않은 문서와 같다."
         )
-    add("R13", "예산을 넘긴 구획이 있으면 문서가 줄어든다", r13_ok, r13_evidence, exempt=True)
+    add("R13", "문서가 예산을 넘으면 줄어든다", r13_ok, r13_evidence, exempt=True)
 
     # R14
     vanished = [
@@ -509,7 +518,8 @@ def review(
         superseded_now=moves["superseded"],
         changed_conditions=changed,
         resolve_first=resolve_first,
-        over_budget=over,
+        size=current_size,
+        budget=bound,
         previous_size=previous_size if isinstance(previous_size, int) else None,
     )
 
@@ -520,6 +530,7 @@ def snapshot(document: Document, backlog: Backlog) -> tuple[dict[str, Any], dict
         "digest": document.digest,
         "preamble_digest": document.preamble_digest,
         "length": document_size(document),
+        "full": full_size(document),
     }
     conditions = {
         c.identifier: {"digest": c.digest, "substance_digest": c.substance_digest}

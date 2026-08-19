@@ -222,7 +222,7 @@ def test_마감_표시가_있으면_통과해도_물러난다(repository: Path) 
 
 
 def test_정리_모드는_브리프에_줄이는_법을_적는다(repository: Path, monkeypatch) -> None:
-    monkeypatch.setenv("HANIK_CONDITION_BUDGET", "300")
+    monkeypatch.setenv("HANIK_DOCUMENT_BUDGET", "500")
     run(repository)
     _honest_resolution(repository, 2)
     run(repository)
@@ -231,3 +231,4 @@ def test_정리_모드는_브리프에_줄이는_법을_적는다(repository: Pa
     assert "정리 모드" in brief
     assert "먼저: 정리한다" in brief
     assert "조건을 통째로 지워 분량을 맞추지 마라" in brief
+    assert "큰 구획부터" in brief
