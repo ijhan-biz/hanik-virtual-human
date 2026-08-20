@@ -28379,5 +28379,51 @@
     "changed_ids": [],
     "size": 37214,
     "budget": 100000
+  },
+  {
+    "iteration": 1402,
+    "at": "2026-08-20T00:10:20+00:00",
+    "signature": "dd555b6864ebf828934ed20d68dec7b57f39c9c63f8e1338988c4f7713ad0c1b",
+    "ok": true,
+    "conditions": 3,
+    "open": 1,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0420"
+    ],
+    "raised_ids": [
+      "O-0421"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 37771,
+    "budget": 100000
+  },
+  {
+    "iteration": 1403,
+    "at": "2026-08-20T00:11:43+00:00",
+    "signature": "d40f79acc44109107467bbd7b79d83f8ab4b38a3d0472b07193cb2c3c73197e6",
+    "ok": true,
+    "conditions": 3,
+    "open": 1,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0421"
+    ],
+    "raised_ids": [
+      "O-0422"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 38436,
+    "budget": 100000
   }
 ]
