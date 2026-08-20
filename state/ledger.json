@@ -63372,5 +63372,234 @@
     ],
     "size": 99977,
     "budget": 100000
+  },
+  {
+    "iteration": 2835,
+    "at": "2026-08-20T18:44:11+00:00",
+    "signature": "a2318883a9847b5408038aa5902988af5743c074455ad31ae0f9a4b7ad0ef52a",
+    "ok": false,
+    "conditions": 3,
+    "open": 2,
+    "resolved_now": 2,
+    "raised_now": 2,
+    "violations": [
+      "R13",
+      "R15"
+    ],
+    "resolved_ids": [
+      "O-0853",
+      "O-0854"
+    ],
+    "raised_ids": [
+      "O-0855",
+      "O-0856"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 100144,
+    "budget": 100000
+  },
+  {
+    "iteration": 2836,
+    "at": "2026-08-20T18:44:28+00:00",
+    "signature": "4fe21e9eebc8cc5093e4d8436adfc92193b0d572dd24486f71b9df0f9cdf8f72",
+    "ok": false,
+    "conditions": 3,
+    "open": 3,
+    "resolved_now": 2,
+    "raised_now": 3,
+    "violations": [
+      "R9",
+      "R13"
+    ],
+    "resolved_ids": [
+      "O-0853",
+      "O-0854"
+    ],
+    "raised_ids": [
+      "O-0855",
+      "O-0856",
+      "O-0857"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 100038,
+    "budget": 100000
+  },
+  {
+    "iteration": 2837,
+    "at": "2026-08-20T18:44:41+00:00",
+    "signature": "566ba0fe330ed63d7a0aca1fe3bf3f53ac08f18fc92d8391deb12d1a362cf840",
+    "ok": true,
+    "conditions": 3,
+    "open": 3,
+    "resolved_now": 2,
+    "raised_now": 3,
+    "violations": [],
+    "resolved_ids": [
+      "O-0853",
+      "O-0854"
+    ],
+    "raised_ids": [
+      "O-0855",
+      "O-0856",
+      "O-0857"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 99955,
+    "budget": 100000
+  },
+  {
+    "iteration": 2838,
+    "at": "2026-08-20T18:45:40+00:00",
+    "signature": "e3366b8bed1c1ca8aaa8d94dd9732d743d70d7c2e434e2223b6043f6f747bdc0",
+    "ok": false,
+    "conditions": 3,
+    "open": 3,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [
+      "R13"
+    ],
+    "resolved_ids": [
+      "O-0855"
+    ],
+    "raised_ids": [
+      "O-0858"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 100107,
+    "budget": 100000
+  },
+  {
+    "iteration": 2839,
+    "at": "2026-08-20T18:46:08+00:00",
+    "signature": "5abfaf09932e8cc94aa8947dc8b9e47106b43d2cefe02129abf0cfa45163a2b0",
+    "ok": true,
+    "conditions": 3,
+    "open": 3,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0855"
+    ],
+    "raised_ids": [
+      "O-0858"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 99846,
+    "budget": 100000
+  },
+  {
+    "iteration": 2840,
+    "at": "2026-08-20T18:49:37+00:00",
+    "signature": "34398eed320cd2cf9921acb292174180df066da59822beefcf687f1c1f88a0d9",
+    "ok": false,
+    "conditions": 3,
+    "open": 3,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [
+      "R13"
+    ],
+    "resolved_ids": [
+      "O-0856"
+    ],
+    "raised_ids": [
+      "O-0859"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 99985,
+    "budget": 100000
+  },
+  {
+    "iteration": 2841,
+    "at": "2026-08-20T18:49:54+00:00",
+    "signature": "9f0c9426166b6a5ec5475ea088aa455580bad9b7b03e61d8d29f0c1827303133",
+    "ok": true,
+    "conditions": 3,
+    "open": 3,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0856"
+    ],
+    "raised_ids": [
+      "O-0859"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 99813,
+    "budget": 100000
+  },
+  {
+    "iteration": 2842,
+    "at": "2026-08-20T18:51:53+00:00",
+    "signature": "d941f81e4c846edc2399a250b015c484ca90f5136a960ffd22292bc5bd801328",
+    "ok": false,
+    "conditions": 3,
+    "open": 3,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [
+      "R2"
+    ],
+    "resolved_ids": [
+      "O-0857"
+    ],
+    "raised_ids": [
+      "O-0860"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-002",
+      "C-003"
+    ],
+    "size": 99569,
+    "budget": 100000
+  },
+  {
+    "iteration": 2843,
+    "at": "2026-08-20T18:52:02+00:00",
+    "signature": "0473881c40bd2e52fc432b03488c4b53966503bf9aa5c831f10157827d6d47ac",
+    "ok": true,
+    "conditions": 3,
+    "open": 3,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0857"
+    ],
+    "raised_ids": [
+      "O-0860"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-002",
+      "C-003"
+    ],
+    "size": 99618,
+    "budget": 100000
   }
 ]
