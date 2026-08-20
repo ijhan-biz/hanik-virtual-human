@@ -19,6 +19,12 @@ MODEL="${HANIK_MODEL:-gpt-5.6-luna}"
 # 원시 로그가 이 크기를 넘으면 한 번만 회전시킨다. 러너는 세션마다 수천 줄을
 # 쏟아내지만 남을 가치가 있는 것은 state/sessions.md와 SUMMARY.md에 추려진다.
 LOG_MAX_BYTES="${HANIK_LOG_MAX_BYTES:-2000000}"
+# 세션이 아예 실행되지 못한 채(인증 실패, 네트워크 단절 등) 끝나는 일이 이만큼
+# 이어지면 러너를 멈춘다. 이것은 정체가 아니라 환경 고장이므로 따로 센다.
+DEAD_LIMIT="${HANIK_DEAD_LIMIT:-5}"
+# 죽은 세션 뒤 기다리는 시간. 회를 거듭할수록 늘려 잠깐의 단절에는 버티고
+# 오래가는 고장에는 매달리지 않는다.
+DEAD_BACKOFF="${HANIK_DEAD_BACKOFF:-60}"
 
 usage() {
     printf '%s\n' \
@@ -108,9 +114,27 @@ show_status() {
     show_summary
 }
 
+artifact_fingerprint() {
+    # Hanik.md와 반론 전체의 내용 해시. 세션이 산출물을 건드렸는지 가른다.
+    ( cd "$ROOT" && python3 -c '
+import hashlib
+from pathlib import Path
+
+digest = hashlib.sha256()
+document = Path("Hanik.md")
+digest.update(document.read_bytes() if document.is_file() else b"")
+objections = Path("objections")
+for path in sorted(objections.glob("*.md")) if objections.is_dir() else []:
+    digest.update(path.name.encode("utf-8"))
+    digest.update(path.read_bytes())
+print(digest.hexdigest())
+' 2>/dev/null ) || printf 'unknown\n'
+}
+
 run_iteration() {
-    local before after agent_status verdict
+    local before after agent_status verdict fingerprint_before fingerprint_after
     rotate_log
+    fingerprint_before="$(artifact_fingerprint)"
     before="$(python3 -c '
 import json
 from pathlib import Path
@@ -160,7 +184,18 @@ except (FileNotFoundError, json.JSONDecodeError, OSError):
 ')"
     printf '[%s] Copilot 종료 코드 %s (현재 반복 %s)\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$agent_status" "$after" >> "$LOG_DIR/runner.log"
 
-    # 세션이 evaluator를 실행하지 못하고 끝난 경우에만 러너가 보완한다.
+    fingerprint_after="$(artifact_fingerprint)"
+
+    # 세션이 반복도 기록하지 않고 산출물도 건드리지 않았다면 아무 일도 일어나지
+    # 않은 것이다. 이때 evaluator를 보완 실행하면 시도조차 없었던 반복이 위반으로
+    # 원장에 남고, 그것이 쌓여 정체로 오판된다. 정체는 "세션이 문서를 고치지
+    # 못한다"는 뜻이지 "세션이 실행되지 않았다"는 뜻이 아니다.
+    if [ "$after" -eq "$before" ] && [ "$fingerprint_before" = "$fingerprint_after" ]; then
+        log "세션이 아무것도 남기지 않았습니다 (종료 코드 $agent_status). 반복으로 세지 않습니다."
+        return 4
+    fi
+
+    # 세션이 일은 했는데 evaluator를 실행하지 못하고 끝난 경우에만 러너가 보완한다.
     if [ "$after" -eq "$before" ]; then
         log "세션이 반복을 기록하지 않아 evaluator를 보완 실행합니다."
         python3 -m src.hanik_loop >> "$LOG_DIR/runner.log" 2>&1 || true
@@ -231,13 +266,29 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-log "Hanik 자동 러너 시작 (PID $$, 간격 ${INTERVAL}s)"
+log "Hanik 자동 러너 시작 (PID $$, 간격 ${INTERVAL}s, 모델 $MODEL)"
 concluded=0
+dead=0
+dead_streak=0
 while [ ! -f "$STOP_FILE" ]; do
-    if ! run_iteration; then
+    run_iteration
+    status=$?
+    if [ "$status" -eq 3 ]; then
         concluded=1
         break
     fi
+    if [ "$status" -eq 4 ]; then
+        dead_streak=$((dead_streak + 1))
+        if [ "$dead_streak" -ge "$DEAD_LIMIT" ]; then
+            dead=1
+            break
+        fi
+        wait_for=$((DEAD_BACKOFF * dead_streak))
+        log "죽은 세션 ${dead_streak}회 연속입니다. ${wait_for}s 뒤 다시 시도합니다."
+        sleep "$wait_for"
+        continue
+    fi
+    dead_streak=0
     [ "$INTERVAL" -eq 0 ] || sleep "$INTERVAL"
 done
 
@@ -245,6 +296,14 @@ if [ "$concluded" -eq 1 ]; then
     log "루프가 물러나 러너를 멈춥니다. 결산은 SUMMARY.md에 있습니다."
     printf '\n루프가 물러났습니다. 결산:\n\n'
     show_summary
+elif [ "$dead" -eq 1 ]; then
+    log "세션이 ${DEAD_LIMIT}회 연속으로 실행되지 못해 러너를 멈춥니다."
+    printf '\n세션이 %s회 연속으로 실행되지 못했습니다.\n\n' "$DEAD_LIMIT"
+    printf '이것은 정체가 아니라 환경 고장입니다. 반복은 기록되지 않았습니다.\n'
+    printf '네트워크와 인증을 확인한 뒤 다시 시작하세요:\n\n'
+    printf '  gh auth status\n'
+    printf '  %s run\n\n' "$0"
+    printf '마지막 로그: %s\n' "$LOG_DIR/runner.log"
 else
     log "Hanik 자동 러너 종료 (사람이 멈춤)"
 fi
