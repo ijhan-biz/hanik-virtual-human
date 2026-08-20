@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "iteration": 1403,
-  "updated_at": "2026-08-20T00:11:43+00:00",
+  "iteration": 1405,
+  "updated_at": "2026-08-20T00:14:05+00:00",
   "document": {
-    "digest": "58085e764884719045476c9c41bd14c570ef17b4e2cc52e3cb4baa7b54729608",
+    "digest": "24faeadbc6aa19393e50518caa0286dd6891551873e71ea841dbc53e4afb62a8",
     "preamble_digest": "3dbf8d9c085eb38f34e16ab0bb3c893386349e53ea84e33c2561a0c861484458",
-    "length": 38436,
-    "full": 42987
+    "length": 39288,
+    "full": 44049
   },
   "conditions": {
     "C-001": {
@@ -18,8 +18,8 @@
       "substance_digest": "8c8b339edc693f68a45a2d3ce5391a6e0507d01f71af8ca5980f670e2753bc1f"
     },
     "C-003": {
-      "digest": "21f3f9af6c7c3e94e5f4b4a2a82fa68a92e86e644ff213b30c46ae116f0c8c5a",
-      "substance_digest": "537ec891b0cb6ad54f90ff23ef8285a68fb52d67542d39841e4d440bf0c4a9b7"
+      "digest": "1928ffc943a34ad4bd006c2b6ac51c10e5b9d289d870b4ea6658a11ade852636",
+      "substance_digest": "cb79962c2cfc2a940dfea643b3d043b495b28328c5c0cb4527e4ec0fe89a30bd"
     }
   },
   "objections": {
@@ -2129,59 +2129,23 @@
       "target": "C-003"
     },
     "O-0422": {
-      "status": "open",
+      "status": "resolved",
       "digest": "2427cfb683e908d35770d0bc8cd84626129dba919b5e93b6c604526e0bb3a830",
+      "target": "C-003"
+    },
+    "O-0423": {
+      "status": "resolved",
+      "digest": "dbed27bcafddffc4e513683f33e12be263a674871f69cfb4ef3b709a7badf84a",
+      "target": "C-003"
+    },
+    "O-0424": {
+      "status": "open",
+      "digest": "ab67b3082373423e3a0e11f1c994c14cc699c9cbeb940ef01b17055359956b47",
       "target": "C-003"
     }
   },
-  "signature": "d40f79acc44109107467bbd7b79d83f8ab4b38a3d0472b07193cb2c3c73197e6",
+  "signature": "785f9cf65c09030c9460f259e499f01524da9777fcd5a5bd19b1eee87d0ac3db",
   "history": [
-    {
-      "iteration": 1354,
-      "at": "2026-08-19T21:56:10+00:00",
-      "signature": "b2aa97f945ece5f131b022919d2441f89faff3b4d4ca3b53244314353a6ca58a",
-      "ok": true,
-      "conditions": 3,
-      "open": 1,
-      "resolved_now": 1,
-      "raised_now": 1,
-      "violations": [],
-      "resolved_ids": [
-        "O-0377"
-      ],
-      "raised_ids": [
-        "O-0378"
-      ],
-      "superseded_ids": [],
-      "changed_ids": [
-        "C-003"
-      ],
-      "size": 13020,
-      "budget": 100000
-    },
-    {
-      "iteration": 1355,
-      "at": "2026-08-19T21:57:27+00:00",
-      "signature": "8d4744e78850aca28f3ce87ce333d328a3b20a4d20dcd07e1c46cf7d11f8495e",
-      "ok": true,
-      "conditions": 3,
-      "open": 1,
-      "resolved_now": 1,
-      "raised_now": 1,
-      "violations": [],
-      "resolved_ids": [
-        "O-0378"
-      ],
-      "raised_ids": [
-        "O-0379"
-      ],
-      "superseded_ids": [],
-      "changed_ids": [
-        "C-003"
-      ],
-      "size": 13401,
-      "budget": 100000
-    },
     {
       "iteration": 1356,
       "at": "2026-08-19T21:58:24+00:00",
@@ -3282,6 +3246,52 @@
         "C-003"
       ],
       "size": 38436,
+      "budget": 100000
+    },
+    {
+      "iteration": 1404,
+      "at": "2026-08-20T00:12:59+00:00",
+      "signature": "fdea10197eee64c5f05e3e8e882b6c5c9fa9c08610be7017d82f5cc567b59dbf",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": [],
+      "resolved_ids": [
+        "O-0422"
+      ],
+      "raised_ids": [
+        "O-0423"
+      ],
+      "superseded_ids": [],
+      "changed_ids": [
+        "C-003"
+      ],
+      "size": 38782,
+      "budget": 100000
+    },
+    {
+      "iteration": 1405,
+      "at": "2026-08-20T00:14:05+00:00",
+      "signature": "785f9cf65c09030c9460f259e499f01524da9777fcd5a5bd19b1eee87d0ac3db",
+      "ok": true,
+      "conditions": 3,
+      "open": 1,
+      "resolved_now": 1,
+      "raised_now": 1,
+      "violations": [],
+      "resolved_ids": [
+        "O-0423"
+      ],
+      "raised_ids": [
+        "O-0424"
+      ],
+      "superseded_ids": [],
+      "changed_ids": [
+        "C-003"
+      ],
+      "size": 39288,
       "budget": 100000
     }
   ]

@@ -28425,5 +28425,51 @@
     ],
     "size": 38436,
     "budget": 100000
+  },
+  {
+    "iteration": 1404,
+    "at": "2026-08-20T00:12:59+00:00",
+    "signature": "fdea10197eee64c5f05e3e8e882b6c5c9fa9c08610be7017d82f5cc567b59dbf",
+    "ok": true,
+    "conditions": 3,
+    "open": 1,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0422"
+    ],
+    "raised_ids": [
+      "O-0423"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 38782,
+    "budget": 100000
+  },
+  {
+    "iteration": 1405,
+    "at": "2026-08-20T00:14:05+00:00",
+    "signature": "785f9cf65c09030c9460f259e499f01524da9777fcd5a5bd19b1eee87d0ac3db",
+    "ok": true,
+    "conditions": 3,
+    "open": 1,
+    "resolved_now": 1,
+    "raised_now": 1,
+    "violations": [],
+    "resolved_ids": [
+      "O-0423"
+    ],
+    "raised_ids": [
+      "O-0424"
+    ],
+    "superseded_ids": [],
+    "changed_ids": [
+      "C-003"
+    ],
+    "size": 39288,
+    "budget": 100000
   }
 ]
