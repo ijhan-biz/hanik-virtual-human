@@ -565,3 +565,64 @@ def test_R13_개정을_쳐내면_정리로_인정된다(repository: Path, monkey
     assert _rule(outcome, "R13").passed
     assert outcome.consolidating, "아직 예산은 넘지만 줄었으므로 통과한다"
     assert "줄었다" in _rule(outcome, "R13").evidence
+
+
+def _many_objections(target: str, count: int, start: int = 1) -> list[str]:
+    return [
+        objection_text(f"O-{start + i:04d}", target=target, status="resolved",
+                       resolved=f"반복 {start + i:04d}에서 해소")
+        for i in range(count)
+    ]
+
+
+def test_R15_최근_반론이_모두_한_조건이면_위반이다(tmp_path: Path) -> None:
+    """세션은 방금 고친 논증에서 새 반론을 뽑으므로 비판이 한 조건에 갇힌다.
+
+    실제로 O-0168 이후 687개의 반론이 모두 C-003만 겨냥했고, 그 조건은 문서의
+    98%가 되었으며 나머지 둘은 최소 분량에 머물렀다.
+    """
+    build_repository(
+        tmp_path,
+        conditions=[condition_block("C-001", "체현"), condition_block("C-002", "유한성")],
+        objections=_many_objections("C-002", 8),
+    )
+    outcome = _review(tmp_path, _accepted(tmp_path))
+    assert not _rule(outcome, "R15").passed
+    assert "C-002만 겨냥한다" in _rule(outcome, "R15").evidence
+    assert "C-001" in _rule(outcome, "R15").evidence, "갈 곳을 알려준다"
+
+
+def test_R15_대상이_갈리면_통과한다(tmp_path: Path) -> None:
+    objections = _many_objections("C-002", 7)
+    objections.append(objection_text("O-0008", target="C-001"))
+    build_repository(
+        tmp_path,
+        conditions=[condition_block("C-001", "체현"), condition_block("C-002", "유한성")],
+        objections=objections,
+    )
+    outcome = _review(tmp_path, _accepted(tmp_path))
+    assert _rule(outcome, "R15").passed
+
+
+def test_R15_반론이_적으면_쏠림을_말하지_않는다(tmp_path: Path) -> None:
+    """한 조건을 여러 반복에 걸쳐 파고드는 것은 정당하다. 막는 것은 그것의 영구화다."""
+    build_repository(
+        tmp_path,
+        conditions=[condition_block("C-001", "체현"), condition_block("C-002", "유한성")],
+        objections=_many_objections("C-002", 3),
+    )
+    outcome = _review(tmp_path, _accepted(tmp_path))
+    assert _rule(outcome, "R15").passed
+    assert "쏠림을 말할 수 없다" in _rule(outcome, "R15").evidence
+
+
+def test_R15_조건이_하나면_묻지_않는다(tmp_path: Path) -> None:
+    """비판이 갈 곳이 하나뿐이면 쏠림은 잘못이 아니다."""
+    build_repository(
+        tmp_path,
+        conditions=[condition_block("C-001", "체현")],
+        objections=_many_objections("C-001", 8),
+    )
+    outcome = _review(tmp_path, _accepted(tmp_path))
+    assert _rule(outcome, "R15").passed
+    assert "갈 곳도 하나다" in _rule(outcome, "R15").evidence

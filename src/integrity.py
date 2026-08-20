@@ -43,6 +43,15 @@ MAX_DUPLICATION = 0.15
 #: 미해결 반론이 이만큼 쌓이면 새 반론 제기 의무(R7)를 면제하고 해소를 우선한다.
 DEFAULT_OPEN_LIMIT = 12
 
+#: 최근 이만큼의 반론이 모두 한 조건만 겨냥하면 R15가 문다.
+#:
+#: 세션은 방금 고친 논증에서 새 반론을 뽑으므로, 그냥 두면 비판이 한 조건으로
+#: 빨려 들어가 영원히 돌아오지 않는다. 실제로 O-0168 이후 687개의 반론이 모두
+#: C-003만 겨냥했고, 그 조건은 문서의 98%가 되었으며 나머지 둘은 최소 분량에
+#: 머물렀다. 상한은 넉넉히 잡는다 — 한 조건을 여러 반복에 걸쳐 파고드는 것은
+#: 정당하고, 막으려는 것은 그것이 영구해지는 일이다.
+DEFAULT_FOCUS_LIMIT = 8
+
 #: 문서 전체(서문 + 모든 조건의 주장·근거·한계)가 가질 수 있는 글자 수 상한.
 #: 품질 기준이 아니라 사람이 읽어낼 수 있는 크기의 상한이다.
 #:
@@ -73,6 +82,10 @@ def _budget(name: str, fallback: int, environ: dict[str, str] | None = None) -> 
 
 def document_budget(environ: dict[str, str] | None = None) -> int:
     return _budget("HANIK_DOCUMENT_BUDGET", DEFAULT_DOCUMENT_BUDGET, environ)
+
+
+def focus_limit(environ: dict[str, str] | None = None) -> int:
+    return _budget("HANIK_FOCUS_LIMIT", DEFAULT_FOCUS_LIMIT, environ)
 
 
 @dataclass(frozen=True)
@@ -509,6 +522,37 @@ def review(
     else:
         r14_evidence = f"이전 조건 {len(previous.conditions)}개가 모두 남아 있다."
     add("R14", "조건이 자취 없이 사라지지 않았다", not unexplained, r14_evidence, exempt=True)
+
+    # R15
+    focus_bound = focus_limit()
+    recent = sorted(backlog.items, key=lambda o: o.identifier)[-focus_bound:]
+    recent_targets = {o.target for o in recent}
+    other_targets = sorted(
+        {c.identifier for c in document.conditions} - recent_targets
+    )
+    if len(document.conditions) < 2:
+        r15_ok = True
+        r15_evidence = "조건이 하나뿐이라 비판이 갈 곳도 하나다."
+    elif len(recent) < focus_bound:
+        r15_ok = True
+        r15_evidence = f"반론이 아직 {len(recent)}개뿐이라 쏠림을 말할 수 없다."
+    elif len(recent_targets) > 1:
+        r15_ok = True
+        r15_evidence = (
+            f"최근 반론 {focus_bound}개가 {len(recent_targets)}곳을 겨냥한다: "
+            f"{', '.join(sorted(recent_targets))}."
+        )
+    else:
+        only = next(iter(recent_targets))
+        r15_ok = False
+        r15_evidence = (
+            f"최근 반론 {focus_bound}개가 모두 {only}만 겨냥한다"
+            f"({recent[0].identifier}–{recent[-1].identifier}). 세션은 방금 고친 "
+            "논증에서 새 반론을 뽑으므로, 그냥 두면 비판이 한 조건으로 빨려 들어가 "
+            "돌아오지 않는다. 이번 반론은 다른 곳을 겨냥하라"
+            + (f": {', '.join(other_targets)}, 또는 문서 전체." if other_targets else ".")
+        )
+    add("R15", "비판이 한 조건에 갇히지 않는다", r15_ok, r15_evidence, exempt=True)
 
     return Review(
         results=tuple(results),
