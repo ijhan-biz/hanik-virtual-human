@@ -131,6 +131,24 @@ class Review:
         return max(0, self.size - self.budget) if self.budget > 0 else 0
 
     @property
+    def headroom(self) -> int:
+        """예산까지 남은 글자 수. 넘었으면 0이다."""
+        return max(0, self.budget - self.size) if self.budget > 0 else 0
+
+    @property
+    def crowded(self) -> bool:
+        """예산에 바짝 붙었는가.
+
+        R13은 넘어야만 문다. 그래서 정확히 예산선에 붙어 있으면 세션은 정리
+        안내를 받지 못한 채 한 글자를 더하고 위반한다. 실제로 반복 2830-2834가
+        그렇게 같은 100,001자 문서를 다섯 번 내놓고 정체로 끝났다. 넘기 전에
+        알려야 그 반복을 버리지 않는다.
+        """
+        if self.budget <= 0:
+            return False
+        return self.headroom <= max(1, self.budget // 20)
+
+    @property
     def ok(self) -> bool:
         return all(result.passed or result.exempt for result in self.results)
 

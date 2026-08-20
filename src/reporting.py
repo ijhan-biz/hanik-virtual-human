@@ -313,14 +313,22 @@ def render_brief(
         )
     lines.append("")
 
-    if review.consolidating:
+    if review.consolidating or review.crowded:
         lines.append("## 먼저: 정리한다")
         lines.append("")
-        lines.append(
-            f"문서가 예산을 **{review.overage}자** 넘었다({review.size}자 / "
-            f"{review.budget}자). 이번 반복은 문서가 **줄어들어야** R13을 통과한다. "
-            "덧붙이는 방식으로는 통과할 수 없다."
-        )
+        if review.consolidating:
+            lines.append(
+                f"문서가 예산을 **{review.overage}자** 넘었다({review.size}자 / "
+                f"{review.budget}자). 이번 반복은 문서가 **줄어들어야** R13을 통과한다. "
+                "덧붙이는 방식으로는 통과할 수 없다."
+            )
+        else:
+            lines.append(
+                f"문서가 예산에 바짝 붙었다({review.size}자 / {review.budget}자, "
+                f"**{review.headroom}자 남음**). 아직 R13은 묻지 않지만, 이대로 "
+                "덧붙이면 다음 반복은 넘는다. 먼저 자리를 만들고 나서 써라 — "
+                "넘긴 뒤에 줄이는 것보다 넘기 전에 줄이는 편이 반복을 버리지 않는다."
+            )
         lines.append("")
         largest = largest_sections(document)
         if largest:

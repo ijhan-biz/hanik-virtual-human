@@ -94,3 +94,45 @@ def test_브리프가_다음_세션에게_사라진_것을_확인하라고_말�
     brief = render_brief(3, document, backlog, _review(302010), _metrics(2547))
     assert "덜어냈다" in brief
     assert "되살려야 할 논증" in brief
+
+
+def _crowded_review(size: int, budget: int = 100_000) -> Review:
+    return Review(
+        results=(),
+        signature="0123456789abcdef",
+        resolved_now=("O-0001",),
+        raised_now=("O-0002",),
+        superseded_now=(),
+        changed_conditions=("C-001",),
+        resolve_first=False,
+        size=size,
+        budget=budget,
+        previous_size=size,
+    )
+
+
+def test_예산에_바짝_붙으면_넘기_전에_알린다(tmp_path) -> None:
+    """R13은 넘어야만 문다. 그래서 예산선에 붙으면 세션이 안내 없이 위반한다.
+
+    반복 2830-2834가 실제로 같은 100,001자 문서를 다섯 번 내놓고 정체로 끝났다.
+    """
+    root = build_repository(tmp_path)
+    document = parse_document(root / "Hanik.md")
+    backlog = parse_backlog(root / "objections")
+
+    review = _crowded_review(100_000)
+    assert review.crowded and not review.consolidating
+    brief = render_brief(3, document, backlog, review, _metrics(2547))
+    assert "먼저: 정리한다" in brief
+    assert "바짝 붙었다" in brief
+    assert "0자 남음" in brief
+
+
+def test_여유가_있으면_정리를_말하지_않는다(tmp_path) -> None:
+    root = build_repository(tmp_path)
+    document = parse_document(root / "Hanik.md")
+    backlog = parse_backlog(root / "objections")
+
+    review = _crowded_review(50_000)
+    assert not review.crowded and not review.consolidating
+    assert "먼저: 정리한다" not in render_brief(3, document, backlog, review, _metrics(2547))
