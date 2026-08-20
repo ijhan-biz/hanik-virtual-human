@@ -21,10 +21,14 @@ MODEL="${HANIK_MODEL:-gpt-5.6-luna}"
 LOG_MAX_BYTES="${HANIK_LOG_MAX_BYTES:-2000000}"
 # 세션이 아예 실행되지 못한 채(인증 실패, 네트워크 단절 등) 끝나는 일이 이만큼
 # 이어지면 러너를 멈춘다. 이것은 정체가 아니라 환경 고장이므로 따로 센다.
-DEAD_LIMIT="${HANIK_DEAD_LIMIT:-5}"
+DEAD_LIMIT="${HANIK_DEAD_LIMIT:-10}"
 # 죽은 세션 뒤 기다리는 시간. 회를 거듭할수록 늘려 잠깐의 단절에는 버티고
-# 오래가는 고장에는 매달리지 않는다.
+# 오래가는 고장에는 매달리지 않는다. 기본값으로 약 35분을 버틴다 — 잠든
+# 노트북이 깨어나 네트워크를 되찾는 데 걸리는 시간을 관측해 잡았다.
 DEAD_BACKOFF="${HANIK_DEAD_BACKOFF:-60}"
+# 한 번에 기다리는 시간의 상한. 없으면 대기가 끝없이 길어져, 네트워크가 돌아와도
+# 러너가 몇 시간 뒤에야 알아차린다.
+DEAD_BACKOFF_MAX="${HANIK_DEAD_BACKOFF_MAX:-300}"
 
 usage() {
     printf '%s\n' \
@@ -284,7 +288,8 @@ while [ ! -f "$STOP_FILE" ]; do
             break
         fi
         wait_for=$((DEAD_BACKOFF * dead_streak))
-        log "죽은 세션 ${dead_streak}회 연속입니다. ${wait_for}s 뒤 다시 시도합니다."
+        [ "$wait_for" -le "$DEAD_BACKOFF_MAX" ] || wait_for="$DEAD_BACKOFF_MAX"
+        log "죽은 세션 ${dead_streak}/${DEAD_LIMIT}회 연속입니다. ${wait_for}s 뒤 다시 시도합니다."
         sleep "$wait_for"
         continue
     fi
