@@ -1,62 +1,119 @@
 # hanik-virtual-human
 
-An automated improvement loop for **Hanik**, a virtual human. Each iteration
-measures Hanik against explicit, file-backed evidence, writes a report, and
-hands the next session a concrete task. The evaluator runs entirely offline:
-no LLM provider, no network access, and no credentials. The workflow's
-separate implementation phase uses Copilot CLI on an ephemeral runner and
-passes its changes through tests and human review.
+가상 인간 **Hanik**을 만드는 무한 루프. 결과물은 `Hanik.md` 하나 — Hanik이 충족해야
+할 '인간의 조건'들을 항목별로 탐구한 정의서다. 루프는 그 문서를 비판적 검토로
+개선한다.
 
-The thing being improved is `hanik/` — the persona, its policies, and its
-benchmarks. Everything else exists to measure that artifact and to keep a
-human in control of what lands.
+## 어떻게 도는가
 
-## How the loop works
+한 번의 실행이 한 번의 반복이고, 한 번의 반복이 한 번의 세션이다.
 
-One run of the loop is one iteration, and one iteration is one fresh session:
+1. 세션이 `state/next-session.md`를 읽는다. 해소할 반론이 지정되어 있다.
+2. 반론의 '해소 조건'이 요구하는 것을 `Hanik.md`에 **실제로 써넣는다.** 그런 뒤에야
+   반론을 `resolved`로 바꾼다.
+3. 고쳐 쓴 논증을 다시 읽고, **새 반론을 하나 이상 제기한다.**
+4. `python3 -m src.hanik_loop`을 돌린다. 보고서·인덱스·상태·다음 브리프가 갱신된다.
+5. 풀 리퀘스트로 넘긴다. 자동으로 병합하지 않는다.
 
-1. The session reads `state/next-session.md` — the brief left by the previous
-   iteration, listing the failing checks in priority order.
-2. It implements **one** task for real, in `hanik/`, `src/`, `tests/`, or the
-   workflow.
-3. It runs `python3 -m src.hanik_loop`, which re-measures the repository from
-   scratch and regenerates the report, the index, the state, and the brief.
-4. The change is delivered as a pull request for human review.
-5. If the evidence actually changed, the workflow dispatches one more
-   iteration — a new run, a new implementation session. If every check passes,
-   that session must add a substantive check for a missing capability.
+반론이 다 떨어지면 루프는 실패한다. 문서가 완성된 것이 아니라 비판이 멈춘 것이기
+때문이다.
 
-The full contract each session follows is in [`AGENTS.md`](AGENTS.md).
+## 판단과 강제를 나눈다
 
-## Scores are evidence, not opinion
+이 저장소의 전신은 점수를 매겼다. 그리고 그 점수는 "직전 반복이 개선을 권고했다"는
+이유만으로 올랐다. 여덟 개 기준이 50번 만에 목표에 도달했고, 루프는 그 뒤로 200번 더
+같은 보고서를 찍어냈다. Hanik은 한 번도 만들어지지 않았다.
 
-Each of the eight criteria in [`HANIK_SPEC.md`](HANIK_SPEC.md) — `identity`,
-`transparency`, `human_control`, `safety`, `privacy`, `memory`, `evaluation`,
-`oversight` — is backed by checks in `src/checks.py` that read files on disk:
-persona sections, policy headings, AST scans of `src/`, PII scans of generated
-output, workflow permissions, test function names. A criterion's score is the
-share of its checks that pass, so **a score can only move when an artifact
-moves.**
+그래서 지금은 이렇게 나눈다.
 
-Every check carries the remediation that would make it pass and the files that
-change should touch, which is what turns a failing check into a task.
+- **비판과 개선은 세션(LLM)이 한다.** 논증이 순환하는지, 전제가 검토되지 않았는지는
+  기계가 알 수 없다.
+- **루프는 판단하지 않는다.** 점수가 없다. 세는 것만 센다. 대신 **정직성**을
+  기계적으로 강제한다.
 
-The initial backlog — a Korean persona, adversarial red-team cases, and fixed
-behavioural scenarios — is implemented. The next handoff deliberately raises
-the bar with Korean safety-policy coverage, because identity examples without
-translated refusal and escalation rules would leave Korean users with weaker
-safeguards. The safety policy is now implemented and its check also verifies
-substantive refusal, self-harm, and emergency language; the next handoff is
-Korean privacy-policy coverage.
+## 정직성 규칙
 
-> Earlier versions of this loop scored differently: a criterion improved
-> whenever the previous iteration had merely *printed* a recommendation for it.
-> Scores rose on their own, all eight reached target after ~50 runs, and the
-> loop then regenerated an identical report 200 more times while nothing about
-> Hanik was ever built. `reports/iteration-0001.html` through `-0250.html` are
-> that history, kept as a record. See [`DECISIONS.md`](DECISIONS.md) §7.
+| 규칙 | 내용 |
+| --- | --- |
+| R1 | `Hanik.md`가 규격대로 파싱된다 |
+| R2 | 모든 조건이 필드를 갖추고 스텁이 아니다 |
+| R3 | 직전 반복 대비 `Hanik.md`가 바뀌었다 |
+| R4 | 반론을 하나 이상 해소했다 |
+| R5 | 해소된 반론의 **대상이 실제로 바뀌었다** |
+| R6 | 이미 제기된 반론의 **제목·대상·본문이 수정되지 않았다** |
+| R7 | 새 반론을 하나 이상 제기했다 |
+| R8 | 미해결 반론이 하나 이상 남아 있다 |
+| R9 | 반론이 규격에 맞고 대상이 실재한다 |
+| R10 | 조건 사이의 문장 중복이 상한 이하다 |
+| R11 | 증거 서명이 직전 반복과 다르다 |
+| R12 | **반론이 사라지거나 상태가 되돌아가지 않았다** |
+| R13 | **문서가 예산을 넘으면 줄어든다** |
+| R14 | **조건이 자취 없이 사라지지 않았다** |
+| R15 | **비판이 한 조건에 갇히지 않는다** |
 
-## Running locally
+첫 반복은 비교 대상이 없으므로 R3–R7과 R12–R15를 면제한다.
+
+핵심은 **R5, R6, R12**다. 셋 다 "일한 척"의 가장 싼 경로를 하나씩 막는다.
+
+- R5는 조건의 해시를 '개정' 이력을 **뺀** 주장·근거·한계로만 계산한다. 개정 줄에
+  "O-0007에 답하며 재작성"이라고 적어두고 내용은 그대로 두는 것을 잡아낸다.
+- R6은 반론의 **제목·대상·본문·해소 조건**을 해시로 묶는다. 반론을 무르게 고쳐
+  해소하는 것과, 본문은 둔 채 대상만 이미 고쳐놓은 조건으로 옮겨 붙이는 것을 함께
+  막는다. 전신이 "검사를 약화시키지 말라"는 탐지 불가능한 규범으로만 막으려 했던
+  실패를 기계적으로 탐지 가능하게 만든다.
+
+### 반대 방향의 압력
+
+R1–R12는 전부 한 방향으로만 민다. R3은 문서가 바뀌기를, R5는 대상 조건이 바뀌기를,
+R7은 반론이 늘기를 요구하고, R2는 최소 분량만 정할 뿐 상한을 두지 않는다. 이 규칙들을
+만족시키는 가장 싼 방법은 언제나 **덧붙이기**다.
+
+그 결과는 실제로 관측되었다. 610번의 반복 뒤 `Hanik.md`는 조건 세 개에 42만 자가
+되었고, 한 조건의 '주장'은 27,801자였다. 주장이 27,801자면 그것은 주장이 아니다.
+전신 저장소는 아무것도 만들지 않아 실패했고, 이 저장소는 아무도 읽을 수 없는 것을
+만들어 같은 자리에 도달할 참이었다.
+
+- **R13**은 반대 방향의 유일한 압력이다. 문서 전체가 예산(기본 100,000자)을 넘으면
+  그 반복은 **정리 모드**가 되고, 실질 분량이 줄어야만 통과한다. 예산은 품질 기준이
+  아니라 읽을 수 있는 크기의 상한이다.
+
+  예산이 세는 것은 읽는 사람이 읽어야 하는 글 전부다 — '개정' 이력도 포함한다.
+  개정은 반복마다 한 줄씩 쌓이므로 예산 밖에 두면 문서에서 가장 빨리 자라는 자리가
+  된다. 개정을 쳐내도 기록은 `reports/`와 `state/ledger.json`에 남는다.
+
+  예산은 구획별이 아니라 **문서 전체**에 걸린다. 어디에 분량을 쓸지는 탐구의 몫이기
+  때문이다. 한 조건이 유난히 어려워 길어지는 것은 정당할 수 있고, 그 대가로 다른
+  조건이 짧아지는 것도 정당하다. 구획마다 상한을 두면 이 배분을 규칙이 대신
+  정해버린다. 규칙이 정해야 하는 것은 총량뿐이다.
+- **R14**는 R13이 여는 구멍을 막는다. 조건을 통째로 지우면 분량은 확실히 줄지만
+  그것은 정리가 아니라 삭제다. 조건을 합치려면 흡수한 조건의 '개정'에 사라진 번호를
+  적어 자취를 남겨야 한다.
+
+정리는 R5와 충돌하지 않고 오히려 맞물린다. 대상 조건을 줄이면 실질 해시가 바뀌므로,
+**줄이면서 반론을 해소할 수 있다.**
+
+### 비판이 한 곳에 갇히는 것
+
+분량 압력만으로는 부족했다. 세션은 방금 고친 논증에서 새 반론을 뽑으므로, 그냥 두면
+비판이 한 조건으로 빨려 들어가 돌아오지 않는다. 이것도 관측이다 — O-0168 이후 **687개의
+반론이 모두 C-003만 겨냥했고**, 그 조건은 문서의 98%가 되었으며 나머지 둘은 최소 분량에
+머물렀다. 문서가 예산 천장에 붙자 통과율은 66%에서 23%로 무너졌다. 세션이 논증 대신
+글자 수를 다투게 되었기 때문이다.
+
+**R15**는 최근 `HANIK_FOCUS_LIMIT`(기본 8)개의 반론이 모두 한 조건만 겨냥하면 문다.
+한 조건을 여러 반복에 걸쳐 파고드는 것은 정당하므로 상한은 넉넉히 잡는다. 막으려는
+것은 그것이 영구해지는 일이다.
+- R12는 반론 파일을 지우거나 번호를 바꾸는 것, 닫힌 반론을 다시 여는 것을 막는다.
+  이것이 없으면 비판을 조용히 삭제하거나, 복제본을 개명해 '새 반론 제기' 의무를
+  때울 수 있다.
+
+조건을 합치거나 없애야 해서 반론이 갈 곳을 잃으면 `superseded`로 은퇴시킨다. 이때
+비판을 넘겨받을 반론을 반드시 지목해야 하고, **은퇴는 해소로 세지 않는다.**
+
+규칙을 어긴 반복은 **스냅샷을 갱신하지 않는다.** 어긴 상태가 다음 반복의 기준이 되면
+위반이 세탁되기 때문이다. 위반은 고쳐질 때까지 남는다.
+
+## 실행
 
 ```bash
 python3 -m pip install -r requirements-dev.txt
@@ -64,78 +121,158 @@ python3 -m pytest tests/ -v
 python3 -m src.hanik_loop
 ```
 
-One invocation performs exactly one iteration. It writes:
+한 번의 호출이 정확히 한 번의 반복이다. 규칙을 어기면 0이 아닌 코드로 끝난다.
 
-| Artifact | Purpose |
+### 자동 실행
+
+수동으로 멈출 때까지 새 Copilot 세션을 반복 실행하려면 다음을 사용한다.
+
+```bash
+scripts/hanik_autorun.sh run
+```
+
+각 세션은 `state/next-session.md`를 읽고 한 과제를 구현한 뒤 테스트와 evaluator를
+실행한다. 커밋·푸시·PR은 자동으로 만들지 않는다. 로그는 `.hanik-auto/logs/runner.log`에
+남는다.
+
+별도 터미널에서 상태를 확인하거나 중단할 수 있다.
+
+```bash
+scripts/hanik_autorun.sh status     # 실행 상태와 결산 요약
+scripts/hanik_autorun.sh summary    # 결산의 요점만
+scripts/hanik_autorun.sh stop       # 러너만 멈춤 (캠페인은 열어 둔 채)
+scripts/hanik_autorun.sh finish     # 캠페인 마감: 멈추고 마지막 결산을 남김
+```
+
+`stop`과 `finish`는 다르다. `stop`은 러너를 멈출 뿐이어서 나중에 다시 `run`할 수
+있다. `finish`는 `state/finish` 표시를 남겨 캠페인을 닫고, 마지막 결산을 만든다.
+표시가 남아 있는 한 루프는 반복을 기록한 뒤 곧바로 물러난다.
+
+기본 세션 간격은 10초이며 `HANIK_AUTO_INTERVAL=0`으로 즉시 다음 세션을 시작한다.
+세션은 `HANIK_MODEL`(기본 `gpt-5.6-luna`)이 지정한 모델로 돈다. `auto`로 두지 않는
+것은 반복마다 모델이 달라지면 무엇이 이 문서를 썼는지 나중에 되짚을 수 없기 때문이다.
+러너는 네트워크 URL과 내장 GitHub MCP를 끄고 실행한다. 자동 실행은 판단을 대신하지
+않으며, 각 세션이 `Hanik.md`와 `objections/`를 실제로 고쳐야 다음 반복이 진행된다.
+
+| 산출물 | 용도 |
 | --- | --- |
-| `reports/iteration-NNNN.html` | Human-readable evidence and open tasks |
-| `reports/iteration-NNNN.json` | Machine-readable companion |
-| `reports/index.html` | Every iteration, newest first |
-| `state/state.json` | Iteration counter, recent history, stagnation counter |
-| `state/archive/` | Older history, pruned but never lost |
-| `state/next-session.md` | The brief for the next session |
+| `SUMMARY.md` | **결산.** 결과물에서 중요한 부분만 추린 것 |
+| `reports/iteration-NNNN.md` | 관측 지표, 이번 변화, 규칙 결과 |
+| `reports/index.md` | 모든 반복, 최신순 |
+| `state/state.json` | 반복 카운터, 조건·반론 해시 스냅샷, 최근 이력 |
+| `state/ledger.json` | 잘리지 않는 전체 반복 기록 |
+| `state/sessions.md` | 최근 세션들이 남긴 것의 요약 |
+| `state/next-session.md` | 다음 세션의 브리프 |
 
-## Continuous mode
+`SUMMARY.md`와 `state/sessions.md`는 **생성물이다.** 매 반복 덮어쓰이므로 손으로
+고치지 마라.
 
-The workflow runs one implementation/evaluation iteration per invocation and
-then asks for the next one, so each iteration is an independent session on a
-clean runner. Copilot CLI reads `state/next-session.md`, changes the repository,
-and is required to leave a non-empty diff before evaluation. Continuation is
-earned, not automatic: the loop sets `should_continue` when the run succeeds,
-the evidence changed recently (or a clean score needs a new check), and
-continuation was not disabled.
-
-Requirements for the chain to continue:
-
-- `HANIK_KILL_SWITCH` is not `true` (checked before checkout).
-- `HANIK_CONTINUOUS` is not `false`.
-- The repository secret `HANIK_DISPATCH_TOKEN` exists — a minimally-scoped
-  token dedicated to this one purpose (see [`SECURITY.md`](SECURITY.md)).
-- The repository secret `HANIK_COPILOT_TOKEN` exists — a fine-grained token
-  with only the Copilot Requests permission for the implementation session.
-
-| Variable | Default | Meaning |
+| 환경 변수 | 기본값 | 뜻 |
 | --- | --- | --- |
-| `HANIK_KILL_SWITCH` | unset | `true` stops the workflow before it does anything |
-| `HANIK_CONTINUOUS` | `true` | `false` stops the chain after the current run |
-| `HANIK_STAGNATION_LIMIT` | `2` | Consecutive no-change iterations before stopping |
-| `HANIK_HISTORY_LIMIT` | `50` | History entries kept in `state/state.json` |
-| `HANIK_MAX_ITERATIONS` | `10000` | Absolute ceiling on the iteration counter |
-| `HANIK_RUN_UNTIL` | unset | Optional ISO-8601 UTC deadline for a bounded campaign |
+| `HANIK_OPEN_LIMIT` | `12` | 이만큼 쌓이면 새 반론 제기 의무(R7)를 면제한다 |
+| `HANIK_HISTORY_LIMIT` | `50` | `state.json`에 남기는 이력 개수 |
+| `HANIK_DOCUMENT_BUDGET` | `100000` | 문서 전체의 분량 상한. '개정'까지 센다(R13) |
+| `HANIK_FOCUS_LIMIT` | `8` | 이만큼의 최근 반론이 한 조건만 겨냥하면 R15가 문다 |
+| `HANIK_STAGNATION_LIMIT` | `5` | 같은 증거 서명이 이만큼 이어지면 정체로 본다 |
+| `HANIK_FINISH` | (없음) | `1`이면 이번 반복을 마지막으로 삼는다 |
+| `HANIK_DEAD_LIMIT` | `10` | 세션이 이만큼 연속으로 실행되지 못하면 러너를 멈춘다 |
+| `HANIK_DEAD_BACKOFF` | `60` | 죽은 세션 뒤 기다리는 기본 초. 회를 거듭할수록 늘어난다 |
+| `HANIK_DEAD_BACKOFF_MAX` | `300` | 한 번에 기다리는 시간의 상한 |
+| `HANIK_MODEL` | `gpt-5.6-luna` | 자동 실행 세션이 쓸 모델 |
 
-A failed run never chains. Neither does a stagnant one: if the evidence has not
-changed for `HANIK_STAGNATION_LIMIT` iterations, re-running cannot help, so the
-workflow stops and says why in the job summary.
+종료 코드는 셋이다. `0`은 통과, `1`은 위반, `3`은 **루프가 물러남**(정체 또는 마감)이다.
 
-This is deliberately different from running the evaluator repeatedly. A fresh
-runner alone cannot improve Hanik; the implementation session is the part that
-turns the previous brief into a real artifact change. If Copilot makes no
-change, the workflow fails before it can create a false-progress report.
+## 산출물 형식
 
-For a time-bounded campaign, set `HANIK_RUN_UNTIL` to a UTC timestamp. Each
-iteration checks the deadline before requesting another run, so a 24-hour
-campaign stops at its declared end without needing a timer trigger or an
-unbounded process.
+조건 하나는 이렇게 생겼다.
 
-## The loop cannot finish
+```markdown
+## C-001 · 체현 — 몸을 가진다는 것
 
-All checks passing means the bar is too low, not that Hanik is done. In that
-state the report and the brief both say the same thing: add a check for a
-capability Hanik genuinely lacks, and let the next iteration fail it.
+**주장:** Hanik에 대한 현재 입장
 
-## Repository map
+**근거:** 왜 이것이 인간의 조건인가, 그리고 판정의 논거
 
-| Path | Purpose |
+**한계:** 이 입장이 아직 해결하지 못한 것
+
+**개정:** 반복 0012에서 O-0007에 답하며 재작성
+```
+
+반론 하나는 이렇게 생겼다.
+
+```markdown
+# O-0007 · 유한성 조건이 죽음을 종료 이벤트로 환원한다
+
+- 상태: open
+- 대상: C-002
+- 제기: 반복 0011
+- 해소: —
+
+## 반론
+
+비판 본문.
+
+## 해소 조건
+
+무엇이 문서에 나타나야 이 반론이 해소되는가. 검증 가능하게 쓴다.
+```
+
+`대상`에는 조건 번호 또는 문서 전체를 뜻하는 `문서`를 쓴다. `상태`는 `open`,
+`resolved`, `superseded` 중 하나다. 전체 규격은
+[`HANIK_SPEC.md`](HANIK_SPEC.md)에 있다.
+
+## 루프는 끝나지 않는다. 그러나 멈출 때는 있다
+
+미해결 반론이 0이 되는 것은 완성이 아니라 실패다. 그 상태에서 보고서와 브리프는 같은
+말을 한다 — 문서를 다시 읽고, 가장 약한 논증을 겨냥한 반론을 새로 제기하라.
+
+"다 했으니 끝"이라는 종료는 여기에 없다. 그것이 전신을 망친 착각이다. 그래도 루프가
+물러나야 할 때는 둘 있다.
+
+- **정체.** 꼬리에 잇달아 위반이면서 같은 증거 서명인 반복이 `HANIK_STAGNATION_LIMIT`번
+  이어진다. 통과한 반복에서 세기를 멈춘다 — 통과는 스냅샷을 밀어 올리므로 그 이전의
+  막힘은 지금의 증거가 아니다. 다시 돌려도
+  달라지지 않는 상태이므로 계속 도는 것은 진전이 아니라 전기를 쓰는 일이다. 세션이
+  문서를 실제로 고치지 못하고 있다는 뜻이고, 사람이 풀어야 한다.
+- **마감.** 사람이 `scripts/hanik_autorun.sh finish`로 캠페인을 닫았다. 판단은
+  사람이 하고, 루프는 그 표시를 읽어 마지막 결산을 남기고 물러난다.
+
+두 경우 모두 루프는 조용히 죽지 않는다. `SUMMARY.md`를 갱신하고, 이유를 보고서와
+브리프에 적고, 종료 코드 `3`으로 끝난다.
+
+**세션이 실행되지 못하는 것은 정체가 아니다.** 네트워크가 끊기거나 인증이 만료되면
+세션은 아무것도 남기지 못한 채 끝난다. 러너는 이것을 반복으로 세지 않는다 — 산출물이
+그대로이고 반복도 기록되지 않았으면 시도조차 없었던 것이므로, evaluator를 보완
+실행하지 않고 물러선다. 잠깐의 단절은 기다렸다 다시 시도하고(`HANIK_DEAD_BACKOFF`),
+`HANIK_DEAD_LIMIT`번 이어지면 정체와 구별되는 메시지를 내고 멈춘다. 기본값으로 약
+35분을 버틴다 — 잠든 노트북이 깨어나 네트워크를 되찾는 데 걸리는 시간을 관측해
+잡았다.
+
+## 결산 — 중요한 부분만
+
+`Hanik.md`는 탐구의 전문이고 [`SUMMARY.md`](SUMMARY.md)는 그 결론만이다. 매 반복
+자동으로 다시 만들어지며, 담는 것은 넷이다.
+
+- **각 조건의 주장** — Hanik의 현재 입장. 문서가 내놓는 답 그 자체다.
+- **각 조건의 한계** — 그 입장이 아직 해결하지 못한 것.
+- **비판의 계보** — 어떤 반론이 어떤 조건을 고치게 만들었는가. 루프가 실제로 생산한
+  것은 문장이 아니라 이 계보다.
+- **분량 회계** — 어느 구획이 예산을 넘었는가.
+
+결산은 **유계다.** 발췌마다 상한이 있고, 주장이 상한을 넘으면 잘린 사실을 함께
+적는다. 한 조건에 대한 입장이 요약될 수 없다면 그것은 아직 입장이 아니라 메모이기
+때문이다. 결산이 문서만큼 자라면 결산이기를 그친다.
+
+## 저장소 지도
+
+| 경로 | 용도 |
 | --- | --- |
-| `hanik/persona.md` | Identity, voice, limitations, escalation |
-| `hanik/persona.ko.md` | Korean identity, boundaries, examples, and handoff |
-| `hanik/policies/` | Safety and privacy policies |
-| `hanik/benchmarks/` | Behavioural regression scenarios |
-| `src/checks.py` | Evidence checks; failing ones are the backlog |
-| `src/hanik_loop.py` | Orchestration, scoring, stagnation detection |
-| `src/reporting.py` | Report, JSON companion, index, session brief |
-| `src/state.py` | Atomic writes, pruning, lossless archive |
-| `AGENTS.md` | What every session must do |
-| `HANIK_SPEC.md` | Requirements vs. hypotheses, per criterion |
-| `SECURITY.md` | Threat model and emergency shutdown |
-| `DECISIONS.md` | Why it is built this way, and what was rejected |
+| `Hanik.md` | 결과물 |
+| `objections/` | 반론 = 백로그 |
+| `SUMMARY.md` | 결산. 중요한 부분만 추린 생성물 |
+| `src/` | 파서, 정직성 규칙, 결산, 마침, 상태, 보고, 오케스트레이션 |
+| `tests/` | 파서·규칙·상태·안전성·전체 흐름 테스트 |
+| `AGENTS.md` | 모든 세션이 따르는 계약 |
+| `HANIK_SPEC.md` | 산출물 규격과 규칙의 정의 |
+| `DECISIONS.md` | 왜 이렇게 만들었고 무엇을 버렸는가 |
+| `SECURITY.md` | 위협 모형과 중단 방법 |
