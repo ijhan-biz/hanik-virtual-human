@@ -84,3 +84,53 @@ def test_정체_상한은_환경_변수로_읽는다() -> None:
 def test_정체_상한의_잘못된_값은_기본값으로_돌아간다() -> None:
     for value in ("0", "1", "-3", "붙임", ""):
         assert stagnation_limit({"HANIK_STAGNATION_LIMIT": value}) == 5
+
+
+def test_통과가_섞여_있으면_정체가_아니다(tmp_path: Path) -> None:
+    """R11은 직전 원장 항목이 아니라 '승인된 스냅샷'과 서명을 견준다.
+
+    위반한 반복은 스냅샷을 갱신하지 않으므로, 위반이 이어진 뒤의 통과는 앞선
+    위반들과 같은 서명을 지닐 수 있다. 실제로 반복 1584-1588에서 그렇게 되어
+    통과한 반복이 정체로 오판되었다. 그 통과가 스냅샷을 밀어 올렸으니 다음
+    반복은 새 기준과 견주게 되고, 다시 돌리면 결과는 달라진다.
+    """
+    ledger = [
+        {"iteration": 1584, "signature": "2cbf8af8", "ok": False},
+        {"iteration": 1585, "signature": "2cbf8af8", "ok": False},
+        {"iteration": 1586, "signature": "2cbf8af8", "ok": False},
+        {"iteration": 1587, "signature": "2cbf8af8", "ok": False},
+        {"iteration": 1588, "signature": "2cbf8af8", "ok": True},
+    ]
+    assert assess(ledger, tmp_path, limit=5).state == CONTINUE
+
+
+def test_잇달아_위반이고_서명이_같으면_정체다(tmp_path: Path) -> None:
+    ledger = [
+        {"iteration": 1584 + i, "signature": "2cbf8af8", "ok": False} for i in range(5)
+    ]
+    verdict = assess(ledger, tmp_path, limit=5)
+    assert verdict.state == STAGNANT
+    assert "잇달아 위반" in verdict.reason
+
+
+def test_통과_이전의_막힘은_세지_않는다(tmp_path: Path) -> None:
+    """통과가 스냅샷을 밀어 올리므로 그 이전은 지금 막혀 있다는 증거가 아니다."""
+    ledger = [
+        {"iteration": 1, "signature": "aaaa", "ok": False},
+        {"iteration": 2, "signature": "aaaa", "ok": False},
+        {"iteration": 3, "signature": "aaaa", "ok": True},
+        {"iteration": 4, "signature": "aaaa", "ok": False},
+        {"iteration": 5, "signature": "aaaa", "ok": False},
+    ]
+    assert assess(ledger, tmp_path, limit=3).state == CONTINUE
+    ledger.append({"iteration": 6, "signature": "aaaa", "ok": False})
+    assert assess(ledger, tmp_path, limit=3).state == STAGNANT
+
+
+def test_서명이_바뀌면_막힘이_끊긴다(tmp_path: Path) -> None:
+    ledger = [
+        {"iteration": 1, "signature": "aaaa", "ok": False},
+        {"iteration": 2, "signature": "bbbb", "ok": False},
+        {"iteration": 3, "signature": "bbbb", "ok": False},
+    ]
+    assert assess(ledger, tmp_path, limit=3).state == CONTINUE

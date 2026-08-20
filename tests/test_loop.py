@@ -198,16 +198,22 @@ def test_원장은_해소와_제기의_번호를_남긴다(repository: Path) -> 
 
 
 def test_같은_증거가_되풀이되면_루프가_물러난다(repository: Path, monkeypatch) -> None:
+    """정체는 '잇달아 위반이면서 같은 서명'이 상한에 이르는 것이다.
+
+    통과한 첫 반복은 세지 않는다. 통과는 승인된 스냅샷을 밀어 올리므로 그
+    이전은 지금 막혀 있다는 증거가 되지 못한다.
+    """
     monkeypatch.setenv("HANIK_STAGNATION_LIMIT", "3")
     assert run(repository) == 0
     assert run(repository) == 1
+    assert run(repository) == 1, "막힌 반복이 둘뿐이면 아직 물러나지 않는다"
     assert run(repository) == EXIT_CONCLUDED
 
     brief = (repository / "state" / "next-session.md").read_text(encoding="utf-8")
     assert "루프가 물러났다 — 정체" in brief
     assert "세션을 새로 시작하지 마라" in brief
 
-    report = (repository / "reports" / "iteration-0003.md").read_text(encoding="utf-8")
+    report = (repository / "reports" / "iteration-0004.md").read_text(encoding="utf-8")
     assert "정체" in report
 
 

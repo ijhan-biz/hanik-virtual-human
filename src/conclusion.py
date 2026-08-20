@@ -81,9 +81,25 @@ def finish_requested(state_dir: Path, environ: dict[str, str] | None = None) -> 
     return (state_dir / FINISH_MARKER).exists()
 
 
-def _recent_signatures(ledger: list[dict[str, Any]], count: int) -> list[str]:
-    tail = ledger[-count:] if count <= len(ledger) else []
-    return [str(entry.get("signature", "")) for entry in tail]
+def _stuck_run(ledger: list[dict[str, Any]]) -> tuple[int, str]:
+    """꼬리에 이어진 '위반이면서 같은 서명'의 길이와 그 서명.
+
+    통과한 반복에서 멈춘다. 통과는 승인된 스냅샷을 밀어 올리므로 다음 반복은
+    새 기준과 견주게 되고, 다시 돌리면 결과가 달라진다. 곧 통과 이전은 지금
+    막혀 있다는 증거가 되지 못한다.
+    """
+    signature = ""
+    length = 0
+    for entry in reversed(ledger):
+        if entry.get("ok"):
+            break
+        current = str(entry.get("signature", ""))
+        if length == 0:
+            signature = current
+        elif current != signature:
+            break
+        length += 1
+    return length, signature
 
 
 def assess(
@@ -107,13 +123,13 @@ def assess(
         )
 
     bound = stagnation_limit(environ) if limit is None else limit
-    signatures = _recent_signatures(ledger, bound)
-    if len(signatures) == bound and signatures and len(set(signatures)) == 1:
+    stuck, signature = _stuck_run(ledger)
+    if stuck >= bound and signature:
         return Conclusion(
             state=STAGNANT,
             reason=(
-                f"최근 {bound}번의 반복이 같은 증거 서명 `{signatures[0][:16]}`를 냈다. "
-                "조건의 실질도 반론의 상태도 그대로다."
+                f"마지막 {stuck}번의 반복이 잇달아 위반이면서 같은 증거 서명 "
+                f"`{signature[:16]}`를 냈다. 조건의 실질도 반론의 상태도 그대로다."
             ),
             guidance=(
                 "다시 돌려도 결과는 같다. 세션이 문서를 실제로 고치지 못하고 있다는 "
