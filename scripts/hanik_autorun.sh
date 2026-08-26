@@ -16,6 +16,11 @@ INTERVAL="${HANIK_AUTO_INTERVAL:-10}"
 # 모델은 러너의 설정 가운데 가장 무거운 것이다. `auto`로 두면 반복마다 달라질 수
 # 있어, 무엇이 이 문서를 썼는지 나중에 되짚을 수 없다.
 MODEL="${HANIK_MODEL:-gpt-5.6-luna}"
+# 이 로컬 러너는 셸에 주입된 GH_TOKEN보다 Copilot CLI의 저장된 로그인
+# 자격 증명을 사용한다. GH_TOKEN에는 조직·엔터프라이즈 선택 정보가 없어
+# "Usage billed to" 오류가 나므로, 세션을 시작할 때만 인증 환경 변수를
+# 제거한다. 토큰 값은 로그에 쓰지 않는다.
+COPILOT_AUTH_ENV=(env -u GH_TOKEN -u GITHUB_TOKEN -u COPILOT_GITHUB_TOKEN)
 # 원시 로그가 이 크기를 넘으면 한 번만 회전시킨다. 러너는 세션마다 수천 줄을
 # 쏟아내지만 남을 가치가 있는 것은 state/sessions.md와 SUMMARY.md에 추려진다.
 LOG_MAX_BYTES="${HANIK_LOG_MAX_BYTES:-2000000}"
@@ -150,7 +155,7 @@ except (FileNotFoundError, json.JSONDecodeError, OSError):
 ')"
 
     log "Copilot 세션 시작 (모델 $MODEL · 직전 반복 $before)"
-    copilot \
+    "${COPILOT_AUTH_ENV[@]}" copilot \
         -C "$ROOT" \
         --prompt "$(cat <<'PROMPT'
 이 저장소의 자동 Hanik 개선 러너가 시작한 단일 작업 세션이다.

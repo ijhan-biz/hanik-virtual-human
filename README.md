@@ -151,6 +151,9 @@ scripts/hanik_autorun.sh finish     # 캠페인 마감: 멈추고 마지막 결�
 기본 세션 간격은 10초이며 `HANIK_AUTO_INTERVAL=0`으로 즉시 다음 세션을 시작한다.
 세션은 `HANIK_MODEL`(기본 `gpt-5.6-luna`)이 지정한 모델로 돈다. `auto`로 두지 않는
 것은 반복마다 모델이 달라지면 무엇이 이 문서를 썼는지 나중에 되짚을 수 없기 때문이다.
+러너는 셸의 `GH_TOKEN`·`GITHUB_TOKEN`보다 Copilot CLI의 저장된 로그인 자격 증명을
+우선한다. 셸 토큰에는 여러 조직의 Usage billed to 선택 정보가 없어 자동 세션이
+시작되지 않을 수 있기 때문이다.
 러너는 네트워크 URL과 내장 GitHub MCP를 끄고 실행한다. 자동 실행은 판단을 대신하지
 않으며, 각 세션이 `Hanik.md`와 `objections/`를 실제로 고쳐야 다음 반복이 진행된다.
 
