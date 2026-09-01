@@ -1,421 +1,165 @@
-"""Hanik virtual-human improvement loop.
+"""반복 하나를 실행한다.
 
-One run of this module is one iteration, and one iteration is meant to be one
-fresh session: the loop keeps no memory in process, reads everything it needs
-from disk, and hands the next session a written brief.
+    python3 -m src.hanik_loop
 
-An iteration does five things:
+이 명령은 판단하지 않는다. 저장소를 있는 그대로 읽고, 정직성 규칙을 돌리고,
+보고서와 다음 세션 브리프를 쓴다. 규칙을 어겼으면 0이 아닌 코드로 끝난다.
 
-1. Load prior state, recovering automatically if it was corrupted.
-2. Measure the virtual human against the evidence checks in :mod:`src.checks`,
-   which read the actual artifacts under ``hanik/``, ``src/``, ``tests/`` and
-   ``.github/workflows/``.
-3. Score each criterion as the share of its checks that pass, and compare
-   against the previous iteration.
-4. Write the report, its machine-readable companion, the report index, and the
-   brief for the next session.
-5. Persist state atomically, pruning old history into ``state/archive/``.
-
-What changed and why
---------------------
-
-The original loop raised a criterion's score whenever the previous iteration
-had emitted a recommendation for it, regardless of whether anything had been
-done about it. Scores therefore climbed on their own, every criterion reached
-the target after a fixed number of runs, and the loop then regenerated an
-identical report forever -- 250 times, in this repository's history. It also
-measured only itself: there was no virtual human in the repository to improve.
-
-Now scores are a function of the repository's contents alone. Nothing improves
-unless an artifact changes, an unchanged repository is reported as stagnant,
-and the failing checks are handed to the next session as a concrete backlog.
+규칙을 어긴 반복은 **스냅샷을 갱신하지 않는다.** 어긴 상태가 다음 반복의 기준이
+되어버리면 위반이 세탁되기 때문이다. 위반은 고쳐질 때까지 남는다.
 """
 
 from __future__ import annotations
 
-import json
-import os
-from dataclasses import dataclass, field
+import argparse
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
 
-from . import reporting
-from .checks import (
-    CHECKS,
-    HANIK_CRITERIA,
-    Check,
-    CheckContext,
-    CheckResult,
-    evidence_signature,
-    overall_score,
-    run_checks,
-    score_criteria,
+from .document import parse_document
+from .conclusion import CONTINUE, Conclusion, assess
+from .integrity import Review, repository_paths, review, snapshot
+from .objections import parse_backlog
+from .reporting import (
+    BRIEF_NAME,
+    INDEX_NAME,
+    Metrics,
+    large_cut,
+    measure,
+    render_brief,
+    render_index,
+    render_report,
+    report_path,
 )
-from .state import (
-    DEFAULT_STATE_PATH,
-    get_history_limit,
-    load_state,
-    prune_history,
-    save_state_atomic,
-)
+from .reporting import _delta as _size_delta
+from .settlement import SETTLEMENT_NAME, render_sessions, render_settlement, settle
+from .state import LEDGER_NAME, load_ledger, load_state, save_ledger, save_state
 
-DEFAULT_REPORTS_DIR = Path("reports")
-
-#: A finite ceiling on the iteration counter. It exists so the loop is
-#: provably bounded, not as the day-to-day control -- stagnation detection is
-#: what actually stops a chain that has nothing left to do.
-DEFAULT_MAX_ITERATIONS = 10_000
-MAX_ITERATIONS_ENV_VAR = "HANIK_MAX_ITERATIONS"
-
-#: Consecutive iterations without any change in evidence before the loop stops
-#: asking for another run. Re-running an unchanged repository cannot improve
-#: it, so continuing would only burn CI minutes and open empty pull requests.
-DEFAULT_STAGNATION_LIMIT = 2
-STAGNATION_LIMIT_ENV_VAR = "HANIK_STAGNATION_LIMIT"
-
-CONTINUOUS_ENV_VAR = "HANIK_CONTINUOUS"
-RUN_UNTIL_ENV_VAR = "HANIK_RUN_UNTIL"
+SESSIONS_NAME = "sessions.md"
 
 
-class HanikLoopError(Exception):
-    """Base class for all Hanik loop errors."""
+def repository_root() -> Path:
+    return Path(__file__).resolve().parent.parent
 
 
-class MaxIterationsReachedError(HanikLoopError):
-    """Raised when running another iteration would exceed the configured bound."""
+def run(root: Path | None = None) -> int:
+    """반복 하나를 수행하고 종료 코드를 돌려준다.
 
-    def __init__(self, iteration: int, max_iterations: int) -> None:
-        super().__init__(
-            f"Refusing to run iteration {iteration}: "
-            f"maximum of {max_iterations} iterations reached."
-        )
-        self.iteration = iteration
-        self.max_iterations = max_iterations
-
-
-@dataclass
-class IterationResult:
-    """The outcome of running a single loop iteration."""
-
-    iteration: int
-    timestamp: str
-    scores: Dict[str, float]
-    deltas: Dict[str, float]
-    overall: float
-    results: List[CheckResult]
-    open_tasks: List[CheckResult]
-    progress: bool
-    stagnant_iterations: int
-    should_continue: bool
-    report_path: Path
-    json_report_path: Path
-    index_path: Path
-    brief_path: Path
-    state_path: Path
-    state: Dict[str, Any] = field(default_factory=dict)
-
-
-def _positive_int_env(name: str, default: int) -> int:
-    raw = os.environ.get(name)
-    if raw is None:
-        return default
-    try:
-        value = int(raw)
-    except ValueError:
-        return default
-    return value if value > 0 else default
-
-
-def get_max_iterations() -> int:
-    """Return the absolute iteration ceiling, always a positive integer."""
-
-    return _positive_int_env(MAX_ITERATIONS_ENV_VAR, DEFAULT_MAX_ITERATIONS)
-
-
-def get_stagnation_limit() -> int:
-    """Return how many no-progress iterations are tolerated before stopping."""
-
-    return _positive_int_env(STAGNATION_LIMIT_ENV_VAR, DEFAULT_STAGNATION_LIMIT)
-
-
-def continuation_enabled() -> bool:
-    """Return False when a human has explicitly disabled continuation."""
-
-    return os.environ.get(CONTINUOUS_ENV_VAR, "").strip().lower() != "false"
-
-
-def continuation_before_deadline(now: Optional[datetime] = None) -> bool:
-    """Return whether an optional UTC run deadline still permits continuation.
-
-    An invalid configured deadline fails closed. An unset deadline preserves
-    the normal continuous-loop behaviour.
+    0은 통과, 1은 위반, 3은 루프가 물러나야 함(정체 또는 마감)이다.
     """
+    root = repository_root() if root is None else root
+    document_path, objections_dir, state_path, reports_dir = repository_paths(root)
+    state_dir = state_path.parent
 
-    raw = os.environ.get(RUN_UNTIL_ENV_VAR, "").strip()
-    if not raw:
-        return True
-    try:
-        deadline = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
-        return False
-    if deadline.tzinfo is None:
-        return False
-    current = now or datetime.now(timezone.utc)
-    return current < deadline.astimezone(timezone.utc)
+    state, notes = load_state(state_path)
+    ledger = load_ledger(state_dir / LEDGER_NAME)
 
+    document = parse_document(document_path)
+    backlog = parse_backlog(objections_dir)
+    outcome = review(document, backlog, state)
 
-def _previous_entry(state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    history = state.get("history") or []
-    return history[-1] if history else None
+    iteration = state.iteration + 1
+    metrics = measure(document, backlog, outcome)
 
-
-def compute_deltas(
-    scores: Dict[str, float], previous_entry: Optional[Dict[str, Any]]
-) -> Dict[str, float]:
-    """Return this iteration's score change per criterion.
-
-    Absent history counts as a zero baseline, so the first iteration reports
-    exactly what it earned rather than an undefined delta.
-    """
-
-    previous_scores: Dict[str, float] = {}
-    if previous_entry:
-        raw = previous_entry.get("scores")
-        if isinstance(raw, dict):
-            for key, value in raw.items():
-                if key in HANIK_CRITERIA and isinstance(value, (int, float)):
-                    previous_scores[key] = float(value)
-
-    return {
-        criterion: round(scores.get(criterion, 0.0) - previous_scores.get(criterion, 0.0), 4)
-        for criterion in HANIK_CRITERIA
+    entry = {
+        "iteration": iteration,
+        "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "signature": outcome.signature,
+        "ok": outcome.ok,
+        "conditions": metrics.conditions,
+        "open": metrics.open_objections,
+        "resolved_now": metrics.resolved_now,
+        "raised_now": metrics.raised_now,
+        "violations": [result.identifier for result in outcome.violations],
+        "resolved_ids": list(outcome.resolved_now),
+        "raised_ids": list(outcome.raised_now),
+        "superseded_ids": list(outcome.superseded_now),
+        "changed_ids": list(outcome.changed_conditions),
+        "size": metrics.substance_length,
+        "budget": outcome.budget,
     }
+    state.history.append(entry)
+    ledger.append(entry)
 
-
-def run_iteration(
-    state_path: Path = DEFAULT_STATE_PATH,
-    reports_dir: Path = DEFAULT_REPORTS_DIR,
-    repo_root: Optional[Path] = None,
-    max_iterations: Optional[int] = None,
-    history_limit: Optional[int] = None,
-    stagnation_limit: Optional[int] = None,
-    checks: Optional[Sequence[Check]] = None,
-) -> IterationResult:
-    """Run one Hanik improvement-loop iteration."""
-
-    if max_iterations is None:
-        max_iterations = get_max_iterations()
-    if history_limit is None:
-        history_limit = get_history_limit()
-    if stagnation_limit is None:
-        stagnation_limit = get_stagnation_limit()
-    if repo_root is None:
-        repo_root = Path(__file__).resolve().parents[1]
-    if checks is None:
-        checks = CHECKS
-
-    state = load_state(state_path)
-    next_iteration = state["iteration"] + 1
-    if next_iteration > max_iterations:
-        raise MaxIterationsReachedError(next_iteration, max_iterations)
-
-    context = CheckContext(
-        repo_root=Path(repo_root),
-        state=state,
-        state_path=state_path,
-        reports_dir=reports_dir,
-        history_limit=history_limit,
-    )
-    results = run_checks(context, checks)
-    scores = score_criteria(results)
-    overall = overall_score(scores)
-    open_tasks = [result for result in results if not result.passed]
-
-    previous_entry = _previous_entry(state)
-    deltas = compute_deltas(scores, previous_entry)
-    signature = evidence_signature(results)
-
-    previous_signature = previous_entry.get("signature") if previous_entry else None
-    progress = previous_signature != signature
-    stagnant_iterations = 0 if progress else int(state.get("stagnant_iterations") or 0) + 1
-
-    timestamp = datetime.now(timezone.utc).isoformat()
+    settlement = settle(document, backlog, iteration, ledger)
+    verdict = assess(ledger, state_dir)
 
     reports_dir.mkdir(parents=True, exist_ok=True)
-    report_path = reports_dir / f"iteration-{next_iteration:04d}.html"
-    json_report_path = reports_dir / f"iteration-{next_iteration:04d}.json"
-    index_path = reports_dir / "index.html"
-    brief_path = state_path.parent / "next-session.md"
+    report = render_report(
+        iteration, document, backlog, outcome, metrics, notes, verdict
+    )
+    report_path(reports_dir, iteration).write_text(report, encoding="utf-8")
 
-    report_path.write_text(
-        reporting.render_html_report(
-            iteration=next_iteration,
-            timestamp=timestamp,
-            scores=scores,
-            deltas=deltas,
-            overall=overall,
-            results=results,
-            open_tasks=open_tasks,
-            stagnant_iterations=stagnant_iterations,
-            progress=progress,
-        ),
+    state.iteration = iteration
+    if outcome.ok:
+        document_snapshot, conditions, objections = snapshot(document, backlog)
+        state.document = document_snapshot
+        state.conditions = conditions
+        state.objections = objections
+        state.signature = outcome.signature
+
+    save_state(state_path, state)
+    save_ledger(state_dir / LEDGER_NAME, ledger)
+    (reports_dir / INDEX_NAME).write_text(render_index(ledger), encoding="utf-8")
+    (state_dir / BRIEF_NAME).write_text(
+        render_brief(iteration, document, backlog, outcome, metrics, verdict),
         encoding="utf-8",
     )
-    json_report_path.write_text(
-        json.dumps(
-            reporting.render_json_report(
-                iteration=next_iteration,
-                timestamp=timestamp,
-                scores=scores,
-                deltas=deltas,
-                overall=overall,
-                results=results,
-                stagnant_iterations=stagnant_iterations,
-                progress=progress,
-            ),
-            indent=2,
-            ensure_ascii=True,
-            sort_keys=True,
+
+    # 결산은 통과 여부와 무관하게 갱신한다. 위반한 반복의 결과물도 결과물이고,
+    # 무엇이 잘못된 채로 남았는지 읽을 수 있어야 한다.
+    (root / SETTLEMENT_NAME).write_text(render_settlement(settlement), encoding="utf-8")
+    (state_dir / SESSIONS_NAME).write_text(render_sessions(ledger), encoding="utf-8")
+
+    _print_summary(root, iteration, outcome, metrics, reports_dir, verdict)
+    if verdict.should_stop:
+        return verdict.exit_code
+    return 0 if outcome.ok else 1
+
+
+def _print_summary(
+    root: Path,
+    iteration: int,
+    outcome: Review,
+    metrics: Metrics,
+    reports_dir: Path,
+    verdict: Conclusion,
+) -> None:
+    relative = report_path(reports_dir, iteration).relative_to(root)
+    print(f"반복 {iteration:04d} — {'통과' if outcome.ok else '위반'}")
+    print(
+        f"  조건 {metrics.conditions}개 / 미해결 반론 {metrics.open_objections}개 / "
+        f"이번 해소 {metrics.resolved_now}개 / 이번 제기 {metrics.raised_now}개"
+    )
+    print(
+        f"  문서 분량 {metrics.document_length}자 / 예산 {outcome.budget}자"
+        f"{_size_delta(outcome, metrics)}"
+    )
+    cut = large_cut(outcome, metrics)
+    if cut is not None:
+        print(f"  대량 삭감 — 실질 분량의 {cut:.0%}가 사라졌다. git diff로 확인하라.")
+    if outcome.consolidating:
+        print(
+            f"  정리 모드 — 문서가 예산을 {outcome.overage}자 넘었다"
+            f" ({outcome.size}자 / {outcome.budget}자)"
         )
-        + "\n",
-        encoding="utf-8",
-    )
-    index_path.write_text(reporting.render_index_html(reports_dir), encoding="utf-8")
-
-    brief_path.parent.mkdir(parents=True, exist_ok=True)
-    brief_path.write_text(
-        reporting.render_session_brief(
-            iteration=next_iteration,
-            timestamp=timestamp,
-            scores=scores,
-            overall=overall,
-            results=results,
-            open_tasks=open_tasks,
-            stagnant_iterations=stagnant_iterations,
-            progress=progress,
-        ),
-        encoding="utf-8",
-    )
-
-    new_state = dict(state)
-    new_state["iteration"] = next_iteration
-    new_state["stagnant_iterations"] = stagnant_iterations
-    new_state["history"] = list(state.get("history") or [])
-    new_state["history"].append(
-        {
-            "iteration": next_iteration,
-            "timestamp": timestamp,
-            "scores": scores,
-            "deltas": deltas,
-            "overall_score": overall,
-            "signature": signature,
-            "progress": progress,
-            "open_tasks": [task.id for task in open_tasks],
-            "report_path": report_path.as_posix(),
-            "json_report_path": json_report_path.as_posix(),
-        }
-    )
-    prune_history(new_state, state_path, history_limit)
-    save_state_atomic(new_state, state_path)
-
-    # A clean score is not a terminal state. The implementation session must
-    # raise the bar with a new evidence check, so the next run still has a
-    # concrete change to make. Stagnation remains the safety stop when that
-    # implementation session fails to change any measured outcome.
-    should_continue = (
-        continuation_enabled()
-        and continuation_before_deadline()
-        and stagnant_iterations < stagnation_limit
-        and next_iteration < max_iterations
-    )
-
-    return IterationResult(
-        iteration=next_iteration,
-        timestamp=timestamp,
-        scores=scores,
-        deltas=deltas,
-        overall=overall,
-        results=results,
-        open_tasks=open_tasks,
-        progress=progress,
-        stagnant_iterations=stagnant_iterations,
-        should_continue=should_continue,
-        report_path=report_path,
-        json_report_path=json_report_path,
-        index_path=index_path,
-        brief_path=brief_path,
-        state_path=state_path,
-        state=new_state,
-    )
+    for result in outcome.violations:
+        print(f"  [{result.identifier}] {result.title} — {result.evidence}")
+    print(f"  보고서: {relative}")
+    print("  브리프: state/next-session.md")
+    print(f"  결산: {SETTLEMENT_NAME}")
+    if not outcome.ok:
+        print("  스냅샷을 갱신하지 않았다. 위반을 고칠 때까지 기준은 그대로다.")
+    if verdict.state != CONTINUE:
+        print(f"  ** {verdict.state} ** {verdict.reason}")
+        if verdict.guidance:
+            print(f"  {verdict.guidance}")
 
 
-def workflow_outputs(result: IterationResult) -> Dict[str, str]:
-    """Return the key/value pairs the GitHub Actions workflow consumes."""
-
-    return {
-        "status": "success",
-        "iteration": str(result.iteration),
-        "overall_score": f"{result.overall:.4f}",
-        "checks_passed": str(sum(1 for check in result.results if check.passed)),
-        "checks_total": str(len(result.results)),
-        "open_tasks": str(len(result.open_tasks)),
-        "progress": "true" if result.progress else "false",
-        "stagnant_iterations": str(result.stagnant_iterations),
-        "should_continue": "true" if result.should_continue else "false",
-    }
-
-
-def write_github_output(outputs: Dict[str, str], path: Optional[str] = None) -> bool:
-    """Append ``outputs`` to the GitHub Actions output file, if running there."""
-
-    target = path or os.environ.get("GITHUB_OUTPUT")
-    if not target:
-        return False
-    with open(target, "a", encoding="utf-8") as handle:
-        for key, value in outputs.items():
-            handle.write(f"{key}={value}\n")
-    return True
-
-
-def _summarise(result: IterationResult) -> str:
-    passed = sum(1 for check in result.results if check.passed)
-    progress_line = f"  Progress      : {'yes' if result.progress else 'no'}"
-    if not result.progress:
-        progress_line += f" (unchanged for {result.stagnant_iterations} iteration(s))"
-
-    lines = [
-        f"Hanik iteration {result.iteration} complete.",
-        f"  Overall score : {result.overall:.2f} ({passed}/{len(result.results)} checks passing)",
-        progress_line,
-        f"  Open tasks    : {len(result.open_tasks)}",
-        f"  Report        : {result.report_path}",
-        f"  Brief         : {result.brief_path}",
-        f"  State         : {result.state_path}",
-    ]
-    if result.open_tasks:
-        top = result.open_tasks[0]
-        lines.append(f"  Next task     : {top.id} - {top.remediation}")
-    else:
-        lines.append("  Next task     : none open; add a check that raises the bar.")
-    if not result.should_continue:
-        lines.append("  Continuation  : stopped; a session must act before another run can help.")
-    return "\n".join(lines)
-
-
-def main() -> int:
-    """CLI entry point used by the GitHub Actions workflow."""
-
-    try:
-        result = run_iteration()
-    except MaxIterationsReachedError as exc:
-        print(str(exc))
-        write_github_output({"status": "max-iterations", "should_continue": "false"})
-        return 1
-
-    print(_summarise(result))
-    write_github_output(workflow_outputs(result))
-    return 0
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Hanik 반복 하나를 실행한다.")
+    parser.add_argument("--root", type=Path, default=None, help="저장소 뿌리 경로")
+    arguments = parser.parse_args(argv)
+    return run(arguments.root)
 
 
 if __name__ == "__main__":

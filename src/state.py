@@ -1,18 +1,10 @@
-"""Durable state handling for the Hanik improvement loop.
+"""반복 사이에 남는 상태.
 
-The loop's memory lives in ``state/state.json``. Three properties matter and
-are enforced here rather than left to convention:
+상태는 판단을 담지 않는다. 직전 반복의 문서와 반론이 어떤 모습이었는지에 대한
+해시와 이력만 담는다. 정직성 규칙은 이 스냅샷과 현재를 비교해서 성립한다.
 
-* **Atomicity** -- state is written to a temporary file in the same directory
-  and moved into place with :func:`os.replace`, which is atomic on POSIX and
-  Windows. A crash mid-write can never leave a truncated state file.
-* **Recoverability** -- a missing, unparsable, or structurally invalid state
-  file resets to a fresh empty state instead of raising, so the loop can
-  always make forward progress. The reset is visible in the next report.
-* **Boundedness without loss** -- only the most recent ``history_limit``
-  iterations stay in the working state file. Older entries are moved into
-  ``state/archive/`` as JSON files, so the audit trail stays complete while
-  the file the loop reads every iteration stays small.
+쓰기는 임시 파일에 쓰고 fsync한 뒤 `os.replace`로 갈아끼운다. 중간에 죽어도
+`state/state.json`이 잘린 채로 남지 않는다.
 """
 
 from __future__ import annotations
@@ -20,189 +12,166 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
-#: Bumped whenever the persisted structure changes in a way that older
-#: readers would misinterpret. Legacy states without the key are migrated.
-SCHEMA_VERSION = 2
-
-#: Number of full history entries retained in ``state/state.json``. Older
-#: entries are archived to ``state/archive/`` instead of being discarded.
+SCHEMA_VERSION = 1
 DEFAULT_HISTORY_LIMIT = 50
-
-#: Environment variable overriding :data:`DEFAULT_HISTORY_LIMIT`.
-HISTORY_LIMIT_ENV_VAR = "HANIK_HISTORY_LIMIT"
-
-DEFAULT_STATE_PATH = Path("state/state.json")
+LEDGER_NAME = "ledger.json"
 
 
-def empty_state() -> Dict[str, Any]:
-    """Return a fresh, valid, empty state."""
-
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "iteration": 0,
-        "history": [],
-        "archive": {"pruned_count": 0, "files": []},
-        "stagnant_iterations": 0,
-    }
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def _coerce_archive(value: Any) -> Dict[str, Any]:
-    if not isinstance(value, dict):
-        return {"pruned_count": 0, "files": []}
-    pruned = value.get("pruned_count")
-    files = value.get("files")
-    return {
-        "pruned_count": pruned if isinstance(pruned, int) and pruned >= 0 else 0,
-        "files": [f for f in files if isinstance(f, str)] if isinstance(files, list) else [],
-    }
-
-
-def load_state(state_path: Path = DEFAULT_STATE_PATH) -> Dict[str, Any]:
-    """Load prior state from ``state_path``, recovering from corruption.
-
-    A state file written by an older schema version is migrated in memory:
-    missing keys are filled with safe defaults rather than treated as
-    corruption, so upgrading the loop never discards history.
-    """
-
-    if not state_path.exists():
-        return empty_state()
-
+def history_limit(environ: dict[str, str] | None = None) -> int:
+    """`HANIK_HISTORY_LIMIT`을 읽는다. 잘못된 값은 기본값으로 되돌린다."""
+    source = os.environ if environ is None else environ
     try:
-        data = json.loads(state_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return empty_state()
-
-    if not isinstance(data, dict):
-        return empty_state()
-
-    iteration = data.get("iteration")
-    history = data.get("history")
-    if not isinstance(iteration, int) or isinstance(iteration, bool) or iteration < 0:
-        return empty_state()
-    if not isinstance(history, list):
-        return empty_state()
-
-    stagnant = data.get("stagnant_iterations")
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "iteration": iteration,
-        "history": [entry for entry in history if isinstance(entry, dict)],
-        "archive": _coerce_archive(data.get("archive")),
-        "stagnant_iterations": stagnant if isinstance(stagnant, int) and stagnant >= 0 else 0,
-    }
-
-
-def _write_json_atomic(payload: Any, path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=".state-", suffix=".tmp", dir=str(path.parent))
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
-            json.dump(payload, tmp_file, indent=2, ensure_ascii=True, sort_keys=True)
-            tmp_file.write("\n")
-            tmp_file.flush()
-            os.fsync(tmp_file.fileno())
-        os.replace(tmp_name, path)
-    finally:
-        if os.path.exists(tmp_name):
-            os.remove(tmp_name)
-
-
-def save_state_atomic(state: Dict[str, Any], state_path: Path = DEFAULT_STATE_PATH) -> None:
-    """Atomically write ``state`` as JSON to ``state_path``."""
-
-    _write_json_atomic(state, state_path)
-
-
-def get_history_limit() -> int:
-    """Return the configured history limit, falling back to the default."""
-
-    raw = os.environ.get(HISTORY_LIMIT_ENV_VAR)
-    if raw is None:
-        return DEFAULT_HISTORY_LIMIT
-    try:
-        value = int(raw)
-    except ValueError:
+        value = int(source.get("HANIK_HISTORY_LIMIT", DEFAULT_HISTORY_LIMIT))
+    except (TypeError, ValueError):
         return DEFAULT_HISTORY_LIMIT
     return value if value > 0 else DEFAULT_HISTORY_LIMIT
 
 
-def archive_dir_for(state_path: Path) -> Path:
-    return state_path.parent / "archive"
+@dataclass
+class State:
+    """직전 반복의 스냅샷."""
+
+    version: int = SCHEMA_VERSION
+    iteration: int = 0
+    updated_at: str = ""
+    document: dict[str, Any] = field(default_factory=dict)
+    conditions: dict[str, dict[str, str]] = field(default_factory=dict)
+    objections: dict[str, dict[str, str]] = field(default_factory=dict)
+    signature: str = ""
+    history: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def is_first_run(self) -> bool:
+        """비교 대상이 없는가.
+
+        반복 번호가 아니라 **승인된 스냅샷의 유무**로 판단한다. 규칙을 어긴 반복은
+        스냅샷을 갱신하지 않으므로, 첫 반복이 실패해도 다음 반복이 비교 대상 없이
+        규칙에 걸리는 일이 없다.
+        """
+        return not self.conditions
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "version": self.version,
+            "iteration": self.iteration,
+            "updated_at": self.updated_at,
+            "document": self.document,
+            "conditions": self.conditions,
+            "objections": self.objections,
+            "signature": self.signature,
+            "history": self.history,
+        }
 
 
-def prune_history(
-    state: Dict[str, Any],
-    state_path: Path,
-    history_limit: int,
-) -> List[Path]:
-    """Move history entries beyond ``history_limit`` into ``state/archive/``.
+def _coerce(payload: Any) -> tuple[State, list[str]]:
+    """읽어들인 값을 State로 만든다. 구조가 어긋나면 새 상태로 되돌린다."""
+    problems: list[str] = []
+    if not isinstance(payload, dict):
+        return State(), ["state.json의 최상위가 객체가 아니다. 새 상태로 시작한다."]
 
-    Mutates ``state`` in place and returns the archive files written. Nothing
-    is deleted: pruned entries are persisted to an archive file named after
-    the iteration range it covers before they leave the working state.
-    """
+    state = State()
+    version = payload.get("version")
+    if not isinstance(version, int) or version > SCHEMA_VERSION:
+        problems.append(f"알 수 없는 상태 스키마 {version!r}. 새 상태로 시작한다.")
+        return State(), problems
 
-    history = state.get("history") or []
-    if len(history) <= history_limit:
-        return []
+    iteration = payload.get("iteration", 0)
+    if not isinstance(iteration, int) or iteration < 0:
+        problems.append(f"반복 번호 {iteration!r}가 올바르지 않다. 0으로 되돌린다.")
+        iteration = 0
+    state.iteration = iteration
+    state.updated_at = payload.get("updated_at") if isinstance(payload.get("updated_at"), str) else ""
+    state.signature = payload.get("signature") if isinstance(payload.get("signature"), str) else ""
 
-    overflow = history[: len(history) - history_limit]
-    retained = history[len(history) - history_limit :]
+    document = payload.get("document")
+    state.document = document if isinstance(document, dict) else {}
 
-    iterations = [
-        entry.get("iteration")
-        for entry in overflow
-        if isinstance(entry.get("iteration"), int)
-    ]
-    first = min(iterations) if iterations else 0
-    last = max(iterations) if iterations else 0
+    conditions = payload.get("conditions")
+    if isinstance(conditions, dict):
+        state.conditions = {
+            key: value for key, value in conditions.items() if isinstance(value, dict)
+        }
+    else:
+        problems.append("조건 스냅샷이 없거나 형식이 어긋난다. 비운 채 시작한다.")
 
-    archive_dir = archive_dir_for(state_path)
-    archive_path = archive_dir / f"history-{first:04d}-{last:04d}.json"
-    _write_json_atomic(
-        {"first_iteration": first, "last_iteration": last, "entries": overflow},
-        archive_path,
-    )
+    objections = payload.get("objections")
+    if isinstance(objections, dict):
+        state.objections = {
+            key: value for key, value in objections.items() if isinstance(value, dict)
+        }
+    else:
+        problems.append("반론 스냅샷이 없거나 형식이 어긋난다. 비운 채 시작한다.")
 
-    archive = _coerce_archive(state.get("archive"))
-    archive["pruned_count"] = archive["pruned_count"] + len(overflow)
-    relative = archive_path.relative_to(state_path.parent.parent).as_posix() if _is_relative(
-        archive_path, state_path.parent.parent
-    ) else archive_path.as_posix()
-    if relative not in archive["files"]:
-        archive["files"].append(relative)
+    history = payload.get("history")
+    if isinstance(history, list):
+        state.history = [entry for entry in history if isinstance(entry, dict)]
+    else:
+        problems.append("이력이 없거나 형식이 어긋난다. 비운 채 시작한다.")
 
-    state["history"] = retained
-    state["archive"] = archive
-    return [archive_path]
+    return state, problems
 
 
-def _is_relative(path: Path, base: Path) -> bool:
+def load_state(path: Path) -> tuple[State, list[str]]:
+    """상태를 읽는다. 없거나 망가졌으면 새 상태로 복구하고 이유를 함께 돌려준다."""
+    if not path.is_file():
+        return State(), []
     try:
-        path.relative_to(base)
-    except ValueError:
-        return False
-    return True
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        return State(), [f"state.json을 읽을 수 없다({error.__class__.__name__}). 새 상태로 시작한다."]
+    return _coerce(payload)
 
 
-def archived_entry_count(state_path: Path) -> int:
-    """Count entries actually present in ``state/archive/`` on disk."""
+def _atomic_write(path: Path, payload: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=str(path.parent), prefix=f".{path.name}.", delete=False
+    )
+    try:
+        with handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(handle.name, path)
+    except BaseException:
+        Path(handle.name).unlink(missing_ok=True)
+        raise
 
-    archive_dir = archive_dir_for(state_path)
-    if not archive_dir.is_dir():
-        return 0
 
-    total = 0
-    for archive_file in sorted(archive_dir.glob("history-*.json")):
-        try:
-            payload = json.loads(archive_file.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            continue
-        entries = payload.get("entries") if isinstance(payload, dict) else None
-        if isinstance(entries, list):
-            total += len(entries)
-    return total
+def load_ledger(path: Path) -> list[dict[str, Any]]:
+    """인덱스를 만들기 위한 전체 반복 기록. 잘리지 않는다."""
+    if not path.is_file():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    return [entry for entry in payload if isinstance(entry, dict)] if isinstance(payload, list) else []
+
+
+def save_ledger(path: Path, entries: list[dict[str, Any]]) -> None:
+    """원장을 원자적으로 쓴다. state.json의 이력이 잘려도 여기에는 남는다."""
+    _atomic_write(path, json.dumps(entries, ensure_ascii=False, indent=2) + "\n")
+
+
+def save_state(path: Path, state: State, limit: int | None = None) -> None:
+    """상태를 원자적으로 쓴다. 상한을 넘는 이력은 잘라낸다.
+
+    잘려나간 이력은 `state/ledger.json`에 그대로 남아 있으므로 손실이 아니다.
+    """
+    bound = history_limit() if limit is None else limit
+    if len(state.history) > bound:
+        state.history = state.history[len(state.history) - bound :]
+
+    state.version = SCHEMA_VERSION
+    state.updated_at = _now()
+    _atomic_write(path, json.dumps(state.to_json(), ensure_ascii=False, indent=2) + "\n")

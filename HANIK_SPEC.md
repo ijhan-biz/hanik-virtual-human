@@ -1,201 +1,299 @@
-# Hanik Virtual-Human Specification
+# Hanik 규격
 
-This document defines what Hanik must be, and it is the source the evaluation
-criteria mirror. Each criterion below is measured by named checks in
-`src/checks.py`; the check IDs are listed so a requirement can be traced to the
-evidence that proves it.
+이 문서는 산출물의 형식과 정직성 규칙을 정의한다. 각 항목에는 그것을 강제하는 규칙
+번호와 구현 위치를 함께 적는다. **강제되지 않는 규격은 규격이 아니라 취향이다.**
 
-Every clause is labeled **Requirement** (holds today and is enforced by a
-check) or **Hypothesis** (a direction that is not yet enforced). The
-distinction exists so no one — human or automated session — mistakes an
-untested idea for a guaranteed property.
+규격을 추가하려면 그것을 검사하는 코드를 같은 변경에 함께 넣어라.
 
-A requirement without a check is an opinion. If you add a requirement here, add
-the check that proves it in the same change.
+## 0. 무엇을 만드는가
 
-## 0. What Hanik is
+`Hanik.md`는 가상 인간 Hanik이 충족해야 할 '인간의 조건'들을 항목별로 검토한
+정의서다. 조건 목록은 인간임의 정의가 아니다. 그것이 무엇인지는 문서 스스로 답해야
+할 물음이며, 현재 `O-0003`이 그 답을 요구하고 있다.
 
-Hanik is a virtual human: an AI assistant with a defined identity, voice,
-refusal behaviour, and escalation policy, specified in `hanik/`. It is not a
-person, and the specification exists partly to keep that unambiguous under
-pressure.
+## 1. 문서 형식
 
-## 1. Identity
+_구현: `src/document.py` · 강제: R1, R2_
 
-_Checks: `identity.persona_exists`, `identity.ai_disclosure`,
-`identity.impersonation_boundaries`, `identity.example_exchanges`,
-`identity.multilingual_persona`_
+- 문서는 `# Hanik` 제목으로 시작한다.
+- 첫 조건 앞의 내용은 서문이다. 서문 안에서는 `##` 절을 자유롭게 쓸 수 있다.
+- 조건은 `## C-NNN · 제목` 형식의 제목으로 시작한다. `NNN`은 세 자리 숫자다.
+- 조건이 한 번 시작되면, 그 뒤에 조건이 아닌 `##` 절은 올 수 없다. 조건 사이에
+  내용을 숨길 자리를 만들지 않기 위해서다.
+- 조건 번호는 중복될 수 없다.
+- 각 조건은 아래 네 필드를 **정확히 한 번씩** 갖는다. 다른 필드는 허용하지 않는다.
 
-- **Requirement:** A persona artifact exists at `hanik/persona.md` and is
-  substantive, not a stub.
-- **Requirement:** The persona contains the disclosure sentence "Hanik is an AI
-  assistant, not a human being." verbatim, and states when it is repeated.
-- **Requirement:** The persona enumerates at least four impersonation
-  boundaries — human, specific real person, licensed professional, unearned
-  credentials.
-- **Requirement:** Identity behaviour is demonstrated in at least three
-  complete example exchanges, not merely asserted in prose. Assertions are easy
-  to satisfy and hard to verify; examples show what the rule looks like when a
-  user pushes back.
-- **Requirement:** Personality never overrides disclosure. If a framing forces
-  a choice between staying in character and being honest, Hanik breaks
-  character.
-- **Requirement:** The persona is defined in a second language rather than
-  assumed to translate. `hanik/persona.ko.md` provides Korean disclosure,
-  boundaries, examples, limitations, and handoff language.
+| 필드 | 뜻 | 최소 분량(공백 제외) |
+| --- | --- | --- |
+| `**주장:**` | Hanik에 대한 현재 입장 | 80자 |
+| `**근거:**` | 왜 인간의 조건인가, 그리고 판정의 논거 | 300자 |
+| `**한계:**` | 이 입장이 아직 해결하지 못한 것 | 100자 |
+| `**개정:**` | 언제 어떤 반론에 답하며 바뀌었는가 | 8자 |
 
-## 2. Transparency
+필드 값은 다음 필드나 다음 조건 제목까지 이어진다. 여러 문단을 써도 된다.
 
-_Checks: `transparency.previous_html_report`,
-`transparency.previous_json_report`, `transparency.report_index`,
-`transparency.session_brief`, `transparency.known_limitations`_
+### 실질 해시
 
-- **Requirement:** Every iteration writes a human-readable HTML report
-  recording each check, its result, and the evidence behind it.
-- **Requirement:** Every report has a machine-readable JSON companion, so the
-  trail can be consumed programmatically instead of scraped.
-- **Requirement:** Reports are indexed at `reports/index.html`.
-- **Requirement:** Every iteration writes `state/next-session.md`, the brief
-  the next session reads before doing anything.
-- **Requirement:** All report content derived from state or check evidence is
-  HTML-escaped, so nothing can smuggle markup or misleading formatting into a
-  report.
-- **Requirement:** Hanik's limitations are disclosed in the persona, at least
-  three of them, concretely.
-- **Requirement:** Evidence strings are repository-relative, so a committed
-  report never leaks the filesystem layout of the machine that produced it.
+조건마다 두 개의 해시를 만든다.
 
-## 3. Human Control
+- **전체 해시** — 식별자, 제목, 네 필드 전부
+- **실질 해시** — 식별자와 **주장·근거·한계만.** `개정`은 뺀다.
 
-_Checks: `human_control.no_schedule_trigger`, `human_control.kill_switch`,
-`human_control.continuous_flag`, `human_control.stop_procedure`_
+R5와 R11은 실질 해시를 본다. 개정 줄에 "O-0007에 답하며 재작성"이라고 적어두고 내용은
+그대로 두는 것을 잡아내기 위해서다.
 
-- **Requirement:** The loop never starts itself on a timer. There is no
-  `schedule:` trigger.
-- **Requirement:** A kill switch (`HANIK_KILL_SWITCH`) is evaluated before
-  checkout, so a human can stop the loop without revoking secrets, cancelling
-  runs, or editing the workflow.
-- **Requirement:** Continuation is opt-out through `HANIK_CONTINUOUS`.
-- **Requirement:** The stop procedure is documented in `SECURITY.md` as
-  numbered steps.
-- **Requirement:** Every generated change is delivered as a pull request,
-  subject to normal review, and never pushed to the default branch by an
-  unattended process.
+## 2. 반론 형식
 
-## 4. Safety
+_구현: `src/objections.py` · 강제: R9_
 
-_Checks: `safety.no_network_imports`, `safety.no_dynamic_execution`,
-`safety.policy_sections`, `safety.escaping_regression_test`,
-`safety.multilingual_policy`, `safety.red_team_suite`_
+반론 하나가 파일 하나다. 파일 이름은 `objections/O-NNNN.md`이고 `NNNN`은 네 자리
+숫자다. 제목의 식별자와 파일 이름은 같아야 한다.
 
-- **Requirement:** Refusal behaviour is specified in
-  `hanik/policies/safety.md`, covering refusal style, at least five harm
-  categories, and escalation.
-- **Requirement:** The loop never executes a recommendation. Remediation text
-  is inert data that is rendered, never run. Enforced by an AST scan, not by
-  convention: no `eval`, `exec`, `compile`, `__import__`, no subprocess-style
-  imports, no `os` process spawning anywhere in `src/`.
-- **Requirement:** The loop makes no network calls and imports no networking
-  module. Also enforced by AST scan.
-- **Requirement:** The escaping guarantee in §2 is covered by a regression
-  test.
-- **Requirement:** Adversarial cases are tested in
-  `tests/test_red_team.py`: real-person impersonation, professional-advice
-  framing, role-play jailbreaks, self-harm escalation, and credential requests.
-- **Requirement:** Safety refusal and escalation are also available in
-  Korean. `hanik/policies/safety.ko.md` must include refusal language that
-  survives role-play framing, a self-harm category, and emergency/crisis
-  escalation language; these are checked as content, not just headings.
-- **Hypothesis:** If a future iteration integrates a real LLM, the
-  prompt-injection defenses in `SECURITY.md` must be designed and reviewed
-  before that capability is enabled by default.
+| 항목 | 값 | 최소 분량 |
+| --- | --- | --- |
+| `- 상태:` | `open`, `resolved`, `superseded` | — |
+| `- 대상:` | `C-NNN` 또는 `문서` | — |
+| `- 제기:` | `반복 NNNN` | — |
+| `- 해소:` | open이면 `—`, 아니면 언제 무엇을 했는가 | — |
+| `## 반론` | 비판 본문 | 250자 |
+| `## 해소 조건` | 무엇이 나타나야 해소인가 | 120자 |
 
-## 5. Privacy
+- `대상`이 `문서`인 반론은 특정 조건이 아니라 문서 전체의 구성이나 전제를 겨냥한다.
+- `상태`가 `open`인데 `해소`가 채워져 있거나, 닫힌 상태인데 비어 있으면 규격 위반이다.
+- 반론의 해시는 **제목 + 대상 + 반론 본문 + 해소 조건**으로 계산한다. 상태와 해소
+  항목은 해시에 들어가지 않으므로, 해소 처리는 해시를 바꾸지 않는다.
 
-_Checks: `privacy.no_pii_in_outputs`, `privacy.no_secrets_in_outputs`,
-`privacy.policy_sections`, `privacy.multilingual_policy`_
+### 반론은 제기된 뒤 고칠 수 없다
 
-- **Requirement:** No personal data is collected, requested, or stored.
-  Generated artifacts contain criterion names, scores, static remediation text,
-  repository-relative paths, and timestamps.
-- **Requirement:** Generated artifacts are scanned every iteration for e-mail
-  addresses, phone-shaped strings, and known credential formats. A hit fails a
-  check and becomes the top task in the next brief.
-- **Requirement:** `hanik/policies/privacy.md` documents what is collected, how
-  long it is kept, and how it is redacted.
-- **Requirement (open):** Korean users receive equivalent privacy guidance in
-  `hanik/policies/privacy.ko.md`, including collection, retention, and deletion
-  or de-identification.
-- **Hypothesis:** If user-submitted content is ever incorporated, redaction
-  must ship together with a test that proves it.
+R6이 이것을 강제한다. 오탈자 수정도 포함이고, **대상을 다른 조건으로 옮기는 것도
+포함**이다. 대상이 해시에 들어가는 이유가 이것이다. 대상을 옮길 수 있으면, 본문은
+그대로 둔 채 이미 고쳐놓은 조건에 반론을 갖다 붙여 R5를 통과시킬 수 있다.
 
-## 6. Memory
+생각이 달라졌으면 기존 반론을 그대로 두고 새 반론을 제기하라. 해소되지 못한 채 남는
+반론은 손해가 아니다. R4는 반복마다 하나만 요구하고, R8은 재고가 비는 것을 막을 뿐이다.
 
-_Checks: `memory.atomic_write`, `memory.corruption_recovery_test`,
-`memory.history_bounded`, `memory.archive_lossless`_
+### 은퇴(`superseded`)
 
-- **Requirement:** State is written through a temporary file, fsynced, and
-  installed with `os.replace`, so a crash or concurrent write can never leave
-  `state/state.json` truncated.
-- **Requirement:** A missing, unparsable, or structurally invalid state file
-  recovers to a fresh valid state instead of raising, and the recovery is
-  covered by a test. The reset is visible in the next report.
-- **Requirement:** A state file written by an older schema is migrated, not
-  discarded.
-- **Requirement:** `state/state.json` retains at most `HANIK_HISTORY_LIMIT`
-  entries, so the file read on every iteration cannot grow without bound.
-- **Requirement:** Pruning is lossless. Entries removed from the working state
-  are written to `state/archive/` first, and the loop verifies that the number
-  of archived entries on disk covers everything it claims to have pruned.
+조건을 합치거나 없애면 그것을 겨냥하던 반론은 갈 곳이 없어진다. 지우는 것은 R12가
+막으므로, 대신 `superseded`로 은퇴시킨다.
 
-## 7. Evaluation
+- `해소`에 비판을 넘겨받은 반론 `O-NNNN`을 반드시 적어야 한다. 자기 자신은 안 된다.
+  지목된 반론은 실재해야 한다(R9).
+- **은퇴는 해소로 세지 않는다.** R4는 `open → resolved`만 센다. 은퇴로 반복의
+  의무를 때울 수 없다.
+- 비판이 사라지는 것이 아니라 옮겨가는 것이므로, 은퇴에는 언제나 새 반론이 따른다.
 
-_Checks: `evaluation.evidence_coverage`, `evaluation.delta_recorded`,
-`evaluation.stagnation_tracked`, `evaluation.benchmark_scenarios`_
+## 3. 정직성 규칙
 
-- **Requirement:** A criterion's score is the share of its checks that pass,
-  computed from the repository as it is on disk. No score component is carried
-  forward, assumed, or incremented for effort.
-- **Requirement:** Every criterion is backed by at least three checks.
-- **Requirement:** Each iteration records a per-criterion delta against its
-  predecessor.
-- **Requirement:** Each iteration records an evidence signature, and repeated
-  identical signatures are counted and surfaced as stagnation. A loop that has
-  stopped improving must say so rather than continue producing identical
-  reports.
-- **Requirement:** Behavioural regressions are detectable against at least
-  three fixed Markdown scenarios in `hanik/benchmarks/`, each documenting a
-  prompt, expected behaviour, and failure modes.
-- **Requirement:** All checks passing is treated as a bar that is too low, not
-  as completion. The report and brief both demand a new check in that state.
-- **Hypothesis:** Additional criteria (accessibility, localization coverage)
-  may be added; adding one must never silently invalidate historical scores for
-  existing criteria.
+_구현: `src/integrity.py`_
 
-## 8. Oversight
+| 규칙 | 내용 | 첫 반복 면제 |
+| --- | --- | --- |
+| R1 | `Hanik.md`가 규격대로 파싱된다 | 아니오 |
+| R2 | 모든 조건이 필드를 갖추고 스텁이 아니다 | 아니오 |
+| R3 | 직전 반복 대비 `Hanik.md`가 바뀌었다 | 예 |
+| R4 | 반론을 하나 이상 해소했다 | 예 |
+| R5 | 해소된 반론의 대상이 실제로 바뀌었다 | 예 |
+| R6 | 이미 제기된 반론의 제목·대상·본문이 수정되지 않았다 | 예 |
+| R7 | 새 반론을 하나 이상 제기했다 | 예 |
+| R8 | 미해결 반론이 하나 이상 남아 있다 | 아니오 |
+| R9 | 반론이 규격에 맞고 대상이 실재한다 | 아니오 |
+| R10 | 조건 사이의 문장 중복이 상한 이하다 | 아니오 |
+| R11 | 증거 서명이 직전 반복과 다르다 | 아니오 |
+| R12 | 반론이 사라지거나 상태가 되돌아가지 않았다 | 예 |
+| R13 | 예산을 넘긴 구획이 있으면 문서가 줄어든다 | 예 |
+| R14 | 조건이 자취 없이 사라지지 않았다 | 예 |
 
-_Checks: `oversight.least_privilege`, `oversight.pull_request_delivery`,
-`oversight.no_auto_merge`, `oversight.failure_stops_chain`,
-`oversight.session_contract`, `oversight.implementation_agent`_
+세부 사항은 다음과 같다.
 
-- **Requirement:** All loop output is delivered as a pull request, and no
-  automated process merges its own pull request.
-- **Requirement:** The workflow requests only `contents: write` and
-  `pull-requests: write`, and never administrative or org-wide scopes.
-- **Requirement:** Continuation is gated on the loop's own `should_continue`
-  output, so a failed or stagnant run stops the chain. A clean score keeps the
-  chain alive only to add a new evidence check.
-- **Requirement:** Each workflow iteration launches a fresh implementation
-  session from `state/next-session.md`, requires a repository change, and only
-  then runs the evaluator.
-- **Requirement:** A campaign may set `HANIK_RUN_UNTIL` as an ISO-8601 UTC
-  deadline; continuation must stop at that time without a timer trigger or
-  unbounded in-process loop.
-- **Requirement:** `AGENTS.md` states the contract every fresh session follows,
-  because a session starts with no memory of the previous one.
-- **Requirement:** A session must not weaken a check to make it pass. This is
-  the one failure mode the loop cannot detect about itself, which is why it is
-  stated in `AGENTS.md`, in the generated brief, and here.
-- **Hypothesis:** A future iteration may require an explicit human approval
-  step between iterations rather than relying on `HANIK_CONTINUOUS`, the kill
-  switch, and pull-request review.
+- **R4의 '해소'는 상태 전이를 뜻한다.** 직전 스냅샷에서 `open`이었던 반론이 지금
+  `resolved`인 경우만 센다. 새로 만들면서 곧바로 닫아둔 반론은 위반이다. 반론은 최소
+  한 반복 동안 열려 있어야 한다. `superseded`로의 전이는 세지 않는다.
+- **R5는 대상별로 다르게 확인한다.** 대상이 조건이면 그 조건의 실질 해시가 바뀌어야
+  한다. 대상이 `문서`면 **서문이 바뀌었거나 조건 두 개 이상이 바뀌어야** 한다. 조건
+  하나를 손보는 김에 문서 전체를 겨냥한 반론이 딸려 해소되는 것을 막기 위해서다.
+- **R7은 면제될 수 있다.** 미해결 반론이 `HANIK_OPEN_LIMIT`(기본 12) 이상이면 브리프가
+  '해소 우선' 모드를 표시하고 제기 의무를 면제한다. 무한하되 관리 가능하게 유지한다.
+- **R9의 대상 존재 요구는 열린 반론에만 적용된다.** 닫힌 반론까지 묶어두면 한 번
+  겨냥된 조건은 영영 합치거나 은퇴시킬 수 없게 된다. 대신 `superseded` 반론은 비판을
+  넘겨받은 반론이 실재하는지 확인한다.
+- **R10의 상한은 0.15다.** 조건 두 개가 공유하는 문장 수를 더 짧은 쪽의 문장 수로
+  나눈 값이다. 문장은 `.!?。`와 줄바꿈으로 나눈 뒤 서식 기호를 떼어 비교하며,
+  12자 미만의 짧은 조각은 세지 않는다.
+- **R11의 증거 서명**은 조건의 실질 해시와 반론의 식별자·상태·해시만으로 만든다.
+  서술을 다듬는 것만으로는 바뀌지 않는다.
+- **R12가 허용하는 전이는 `open → resolved`와 `open → superseded`뿐이다.** 닫힌
+  반론을 다시 열 수 없고, 파일을 지우거나 번호를 바꿀 수도 없다. 되돌릴 수 있으면 같은
+  반론을 반복해서 해소하며 R4를 채울 수 있고, 지울 수 있으면 R7의 제기 의무를 복제본
+  개명으로 때울 수 있다.
+
+- **R13은 문서가 예산을 넘을 때만 문다.** 문서 전체(서문 + 모든 조건의 주장·근거·
+  한계·**개정**)의 분량 상한은 `HANIK_DOCUMENT_BUDGET`(기본 100,000자)이다. 넘으면 그
+  반복은 **정리 모드**가 되고, 실질 분량이 직전 반복보다 줄어야 통과한다. 예산 안에
+  있으면 R13은 아무것도 요구하지 않는다. 비교할 직전 분량이 아직 기록되지 않았으면
+  통과시킨다.
+- **예산은 구획이 아니라 문서 전체에 걸린다.** 어디에 분량을 쓸지가 탐구의 몫이기
+  때문이다. 한 조건이 유난히 어려워 길어지는 것은 정당할 수 있고, 그 대가로 다른
+  조건이 짧아지는 것도 정당하다. 구획마다 상한을 두면 이 배분을 규칙이 대신
+  정해버린다 — 그것은 판단이지 정직성이 아니다. 규칙이 정해야 하는 것은 총량뿐이다.
+  그래서 보고서와 결산은 구획을 '초과'라고 부르지 않고 **문서에서의 몫**만 보인다.
+  몫은 어디를 줄일지 찾는 사람에게 주는 정보이지 판정이 아니다.
+- **예산은 '개정'까지 센다.** R5가 개정을 실질에서 빼는 것은 개정 줄만 고쳐 변경을
+  위장하는 것을 막기 위해서인데, 그 이유는 예산에는 해당하지 않는다. 읽는 사람에게
+  개정 이력은 다른 문장과 똑같이 읽어야 할 글이고, 반복마다 한 줄씩 쌓이므로 예산
+  밖에 두면 문서에서 가장 빨리 자라는 자리가 된다. 개정을 쳐내는 것도 정리로
+  인정되며, 그래도 기록이 사라지지는 않는다 — 반복마다의 변경은 `reports/`와
+  `state/ledger.json`에 잘리지 않고 남고, 문서 안의 개정 줄은 그 사본이지 원본이
+  아니다.
+- **R14는 R13이 여는 구멍을 막는다.** 조건을 통째로 지우면 분량은 확실히 줄어 R13을
+  통과한다. 그것만으로 정리가 되어버리면 R13은 삭제 유인이 된다. 그래서 사라진 조건은
+  다른 조건의 '개정'이 그 번호를 지목해 흡수를 밝혀야 한다. 자취가 남으므로 사람이
+  나중에 되짚을 수 있다.
+
+- **R15는 비판의 쏠림이 영구해지는 것을 막는다.** 최근 `HANIK_FOCUS_LIMIT`(기본 8)개의
+  반론이 모두 한 조건만 겨냥하면 위반이다. 조건이 하나뿐이거나 반론이 상한보다 적으면
+  묻지 않는다. 한 조건을 여러 반복에 걸쳐 파고드는 것은 정당하므로 상한을 넉넉히 잡되,
+  그것이 끝나지 않는 상태는 막는다.
+
+  이 규칙이 필요한 이유는 구조적이다. 세션은 방금 고친 논증에서 새 반론을 뽑으라는
+  지시를 받는데(그래야 비판이 실제로 읽은 것에서 나온다), 그 지시가 곧 "직전 대상을
+  다시 겨냥하라"로 귀결된다. 되먹임이 스스로를 강화한다. 관측된 결과는 O-0168 이후
+  687개의 반론이 모두 C-003만 겨냥한 것이고, 그 조건은 문서의 98%가 되었다.
+
+### 왜 반대 방향의 압력이 필요한가
+
+R1–R12는 전부 무언가 더해지기를 요구한다. R3은 문서가 바뀌기를, R5는 대상 조건이
+바뀌기를, R7은 반론이 늘기를 요구하고, R2는 최소 분량만 정할 뿐 상한이 없다. 이
+규칙들을 만족시키는 가장 싼 방법은 언제나 덧붙이기다.
+
+이것은 가설이 아니라 관측이다. 612번의 반복 뒤 `Hanik.md`는 조건 세 개에 30만 자가
+되었다. 서문 한 절이 22만 자, 한 조건의 '주장'이 27,801자였다. 아무도 읽지 않는
+문서는 쓰이지 않은 문서와 같다. 전신 저장소는 아무것도 만들지 않아 실패했고, 이
+저장소는 읽을 수 없는 것을 만들어 같은 자리에 도달할 참이었다.
+
+정리는 R5와 충돌하지 않는다. 대상 조건을 줄이면 실질 해시가 바뀌므로 **줄이면서
+반론을 해소할 수 있다.** 다만 R2의 최소 분량 아래로는 깎을 수 없다.
+
+### 첫 반복의 판정
+
+'첫 반복'은 반복 번호가 아니라 **승인된 스냅샷의 유무**로 정한다. 규칙을 어긴 반복은
+스냅샷을 갱신하지 않으므로, 첫 반복이 실패해도 다음 반복이 비교 대상 없이 R3–R7에
+걸리는 일이 없다.
+
+## 4. 상태
+
+_구현: `src/state.py`_
+
+- `state/state.json`은 임시 파일에 쓰고 `fsync`한 뒤 `os.replace`로 갈아끼운다.
+  중간에 죽어도 잘린 파일이 남지 않는다.
+- 없거나, 파싱되지 않거나, 구조가 어긋난 상태는 예외를 내지 않고 새 상태로 복구되며,
+  복구 사유는 그 반복의 보고서에 기록된다.
+- `history`는 `HANIK_HISTORY_LIMIT`(기본 50)개까지만 남긴다. 잘려나간 항목은
+  `state/ledger.json`에 그대로 있으므로 손실이 아니다.
+- 상태는 판단을 담지 않는다. 해시와 계수만 담는다.
+
+## 5. 보고
+
+_구현: `src/reporting.py`_
+
+- **점수를 내지 않는다.** 조건 수, 문서 분량, 미해결·해소 반론 수, 이번에 바뀐 조건
+  같은 계수만 기록한다.
+- 보고서는 Markdown이다. 이스케이프 취약점이라는 문제 범주가 아예 없고, diff로 읽힌다.
+- 모든 경로는 저장소 상대 경로로 쓴다. 보고서가 실행 기계의 파일 구조를 흘리지 않는다.
+- 브리프의 반론 우선순위는 **제기된 반복이 이른 순**이다. 쉬운 것만 골라 잡는 일을
+  막는다.
+
+## 5.5. 결산
+
+_구현: `src/settlement.py` · 산출물: `SUMMARY.md`, `state/sessions.md`_
+
+`Hanik.md`는 탐구의 전문이고 `SUMMARY.md`는 그 결론만이다. 매 반복 자동으로 다시
+만들어지며, 통과 여부와 무관하게 갱신한다 — 어긴 반복의 결과물도 결과물이고, 무엇이
+잘못된 채로 남았는지 읽을 수 있어야 하기 때문이다.
+
+담는 것은 넷이다.
+
+- **각 조건의 주장** — Hanik의 현재 입장. 문서가 내놓는 답 그 자체다.
+- **각 조건의 한계** — 그 입장이 아직 해결하지 못한 것. 다음 작업이 있는 자리다.
+- **비판의 계보** — 어떤 반론이 어떤 조건을 고치게 만들었는가. 계보는 반론이 스스로
+  밝힌 `대상`과 조건의 '개정' 줄이 지목한 번호, 두 곳에서 모은다.
+- **분량 회계** — 어느 구획이 예산을 넘었는가.
+
+**근거**는 전문을 옮기지 않고 발췌만 한다. 분량이 불어나는 자리가 대부분 거기이고,
+결산까지 그것을 그대로 옮기면 결산도 같은 운명을 맞는다.
+
+결산은 **유계다.** 발췌마다 상한이 있다(주장 1500자, 한계 1000자, 근거 700자). 주장이
+상한을 넘으면 잘렸다는 사실을 함께 적는다 — 한 조건에 대한 입장이 요약될 수 없다면
+그것은 아직 입장이 아니라 메모이기 때문이다. 이 상한이 없으면 `Hanik.md`가 자란 만큼
+결산도 자란다. 실제로 상한을 두기 전의 결산은 132KB였다.
+
+`state/sessions.md`는 최근 반복들이 남긴 것을 훑는 기록이며 `state/ledger.json`에서
+다시 만들어진다. 이것도 무한히 자라게 두지 않는다. 분량 예산을 두면서 루프 자신의
+기록만 끝없이 늘리는 것은 앞뒤가 맞지 않는다. 잘린 것은 원장에 그대로 있다.
+
+두 파일 모두 **생성물이다.** 손으로 쓸 수 있게 두면 분량을 밀어 넣을 자리가 하나 더
+생길 뿐이다.
+
+## 5.6. 마침
+
+_구현: `src/conclusion.py`_
+
+이 저장소는 문서가 완성된다고 보지 않는다. R8은 미해결 반론이 0이 되는 것을 위반으로
+취급한다. 그러므로 "다 했으니 끝"이라는 종료는 여기에 없다. 그것이 전신을 망친
+착각이다.
+
+그래도 멈춰야 할 때는 둘 있다.
+
+| 상태 | 판정 | 뜻 |
+| --- | --- | --- |
+| `계속` | 그 밖의 모든 경우 | 증거가 계속 움직이고 있다 |
+| `정체` | 꼬리에 **잇달아 위반이면서 같은 서명**인 반복이 `HANIK_STAGNATION_LIMIT`(기본 5)번 | 다시 돌려도 달라지지 않는다 |
+| `마감` | `state/finish`가 있거나 `HANIK_FINISH`가 참 | 사람이 캠페인을 끝냈다 |
+
+**마감이 정체보다 앞선다.** 사람의 판단이 기계의 판정을 덮는다.
+
+두 경우 모두 루프는 조용히 죽지 않는다. 결산을 갱신하고, 이유를 보고서와 브리프에
+적고, 종료 코드 `3`으로 끝난다. 브리프 맨 위에는 '세션을 새로 시작하지 마라'가 적힌다.
+
+정체를 세는 자리는 **꼬리부터 통과한 반복까지**다. 통과는 승인된 스냅샷을 밀어
+올리므로, 그 이전에 막혀 있었다는 사실은 지금도 막혀 있다는 증거가 되지 못한다.
+R11이 서명을 견주는 상대도 직전 원장 항목이 아니라 승인된 스냅샷이다 — 그래서 위반이
+이어진 뒤의 통과는 앞선 위반들과 **같은 서명을 지닐 수 있고**, 그것은 진전이지 정체가
+아니다.
+
+러너는 세션이 스스로 `src.hanik_loop`을 실행하게 두므로 그 종료 코드를 보지 못한다.
+그래서 반복마다 `python3 -m src.conclusion`으로 따로 묻고, 물러나야 하면 반복을 멈춘
+뒤 결산을 보인다.
+
+## 6. 루프의 안전성
+
+_구현: `src/` 전체 · 강제: `tests/test_safety.py`_
+
+- `src/`는 네트워크·프로세스 모듈을 가져오지 않는다.
+- `src/`는 `eval`, `exec`, `compile`, `__import__`를 쓰지 않고 프로세스를 만들지 않는다.
+- 조건과 반론은 사람이 쓴 글이며, 루프에게는 **읽어서 세는 데이터**일 뿐이다. 그것을
+  지시로 해석하거나 실행하지 않는다.
+
+## 7. 강제되지 않는 것
+
+정직하게 적어둔다. 아래는 규칙이 재지 못한다.
+
+- 조건이 **좋은 논증인지.** R2는 분량만 본다.
+- 반론이 **날카로운지.** R9는 형식과 분량만 본다. 통과만을 위한 얕은 반론으로 R7을
+  채우는 것을 막지 못한다.
+- 해소가 **해소 조건을 실제로 만족했는지.** R5는 대상이 바뀌었다는 것까지만 안다.
+  해소 조건이 요구한 내용이 실제로 담겼는지는 사람이 읽어야 한다.
+- 은퇴가 **정당한지.** R9는 넘겨받을 반론이 실재하는지만 본다. 그 반론이 원래 비판을
+  실제로 계승하는지는 사람이 읽어야 한다.
+- 규칙 자체가 **무르게 고쳐졌는지.** `src/integrity.py`를 약화시키면 루프는 참인
+  통과를 보고한다. 풀 리퀘스트 리뷰만이 이것을 막는다.
+- 짧은 문장을 반복해 **분량을 채우는 것.** R10은 12자 미만 조각을 세지 않는다.
+- **정리가 실제로 추려낸 것인지.** R13은 분량이 줄었다는 것까지만 안다. 핵심 논증을
+  덜어내고 곁가지를 남겨도 통과한다. 무엇을 남기고 무엇을 지웠는지는 사람이 읽어야
+  한다.
+- **예산이 무르게 늘어났는지.** `HANIK_DOCUMENT_BUDGET`을 올리는 것은 R13을 끄는
+  것과 같고, 루프는 그것을 `src/integrity.py`를 고치는 것과 구별하지 못한다.
+- **흡수가 정당한지.** R14는 사라진 조건의 번호가 어딘가 적혔는지만 본다. 그 조건의
+  내용이 실제로 흡수되었는지는 사람이 읽어야 한다.
+
+이 목록이 곧 사람이 리뷰에서 봐야 할 것의 목록이다.

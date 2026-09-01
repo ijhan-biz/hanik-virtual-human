@@ -1,91 +1,106 @@
 # AGENTS.md
 
-You are starting a session with no memory of the previous one. This file and
-`state/next-session.md` are the entire handover. Read both before touching
-anything else.
+당신은 이전 세션의 기억이 없다. 이 파일과 `state/next-session.md`가 인수인계의
+전부다. 둘 다 읽고 나서 다른 것을 만져라.
 
-## The loop
+## 이 저장소가 하는 일
 
-This repository builds **Hanik**, a virtual human. The artifact being improved
-is `hanik/` — the persona, its policies, and its benchmarks. Everything else
-exists to measure that artifact and to hand the next session a task.
+결과물은 `Hanik.md` 하나다. 가상 인간 **Hanik**이 충족해야 할 '인간의 조건'들을
+항목별로 검토한 정의서다.
 
-One iteration is one session:
+루프는 그 문서를 **비판적 검토**로 개선한다. 비판은 반론(objection)의 형태로
+`objections/`에 쌓이고, 미해결 반론이 곧 할 일이다. 반론이 없는 상태는 완성이
+아니라 비판이 멈춘 상태이며, 루프는 그것을 실패로 취급한다.
 
-1. A session reads `state/next-session.md` and picks the top open task.
-2. The session implements that task for real, in `hanik/`, `src/`, `tests/`, or
-   `.github/workflows/`.
-3. The session runs the loop, which re-measures the repository from scratch,
-   writes `reports/iteration-NNNN.html` plus its JSON companion, updates
-   `state/state.json`, and rewrites `state/next-session.md`.
-4. The change is delivered as a pull request for human review.
-5. If the evidence actually changed, the workflow asks for one more iteration —
-   a new run, a new implementation session. If every check passes, the next
-   session must add a substantive check for a missing capability instead of
-   ending the chain.
+역할이 나뉘어 있다.
 
-Scores are not opinions. Each criterion in `HANIK_SPEC.md` is backed by checks
-in `src/checks.py` that read files on disk; a criterion's score is the share of
-its checks that pass. Nothing improves unless an artifact changes.
+- **판단은 당신이 한다.** 조건이 얕은지, 전제가 검토되지 않았는지, 논증이 순환하는지는
+  기계가 알 수 없다.
+- **루프는 판단하지 않는다.** 점수를 매기지 않는다. 정직성만 기계적으로 강제한다.
 
-## What a session must do
+## 한 세션이 하는 일
 
-1. **Read the brief.** `state/next-session.md` lists the failing checks in
-   priority order, with the evidence for each failure, the remediation, and the
-   files to touch.
-2. **Pick exactly one task.** The first one, unless you have a stated reason to
-   prefer another. One task done properly beats five done superficially.
-3. **Implement it in the artifact.** Write the persona section, the policy, the
-   benchmark scenario, or the test that the check is asking for. Write it as if
-   a person will rely on it, because the check only measures that it exists and
-   is substantive — it cannot measure whether it is any good. That part is on
-   you. The automated implementation session must leave a repository change;
-   an unchanged checkout is a failed iteration, not progress.
-4. **Verify.** `python3 -m pip install -r requirements-dev.txt` then
+1. **브리프를 읽는다.** `state/next-session.md`에 이번에 해소할 반론이 지정되어 있다.
+   가장 오래 열려 있던 반론이 먼저다.
+2. **반론 하나를 해소한다.** `objections/O-NNNN.md`의 '해소 조건'이 요구하는 것을
+   `Hanik.md`의 대상 조건에 **실제로 써넣는다.** 그런 다음에야 그 반론의 `상태`를
+   `resolved`로, `해소`를 `반복 NNNN에서 ...`로 바꾼다.
+3. **새 반론을 하나 이상 제기한다.** 방금 고쳐 쓴 논증을 다시 읽고, 그것이 새로
+   끌어들인 전제나 아직 답하지 못한 물음을 겨냥하라. 이것이 루프의 동력이다.
+   미해결 반론이 상한에 이르렀으면 브리프가 '해소 우선'을 표시하고 이 의무를 면제한다.
+4. **검증한다.** `python3 -m pip install -r requirements-dev.txt` 후
    `python3 -m pytest tests/ -v`.
-5. **Run the loop last.** `python3 -m src.hanik_loop`. This regenerates the
-   report, the index, the state, and the brief for the session after you.
-   Running it before your change means you hand the next session stale
-   information.
-6. **Open a pull request.** Never merge it yourself.
+5. **루프를 마지막에 돌린다.** `python3 -m src.hanik_loop`. 보고서, 인덱스, 상태,
+   결산(`SUMMARY.md`), 다음 브리프를 다시 만든다. 변경 전에 돌리면 다음 세션에 낡은
+   정보를 넘기게 된다. 종료 코드 `3`은 루프가 물러났다는 뜻이며(정체 또는 마감),
+   그때는 반복을 더 쌓지 말고 사람에게 넘긴다.
+6. **풀 리퀘스트를 연다.** 직접 병합하지 않는다.
 
-## Rules
+자동 러너(`scripts/hanik_autorun.sh`)가 세션을 시작한 경우에는 러너가 반복과 로그를
+관리하므로 커밋·푸시·풀 리퀘스트를 만들지 말고 작업 트리에 변경을 남긴다. 러너는
+수동으로 `scripts/hanik_autorun.sh stop`을 실행할 때까지 새 세션을 시작한다.
 
-- **Change the artifact, not the check.** Editing `src/checks.py` to make a
-  failing check pass without building the capability is the one failure this
-  loop cannot detect on its own. It is exactly how the previous scoring model
-  went wrong: scores climbed to 0.90 across 250 iterations while nothing about
-  Hanik was ever built.
-- **Never fabricate evidence.** Do not write a file whose only purpose is to
-  satisfy a string match. If a check is measuring the wrong thing, say so in
-  the pull request and change the check deliberately, with the reasoning
-  recorded in `DECISIONS.md`.
-- **When the backlog is empty, raise the bar.** All checks passing means the
-  standard is too low, not that Hanik is finished. Add a check for a capability
-  Hanik genuinely lacks, with a concrete `remediation` and `targets`, and let
-  the next iteration fail it.
-- **When the loop reports stagnation, stop.** Repeated identical evidence means
-  re-running changes nothing. Implement something or escalate to a human;
-  the workflow will stop the chain on its own after
-  `HANIK_STAGNATION_LIMIT` no-progress iterations.
-- **Respect the campaign deadline.** If `HANIK_RUN_UNTIL` is set, it is an
-  ISO-8601 UTC end time. Do not extend it from a session; the human who started
-  the campaign controls its duration.
-- **Stay offline and inert.** `src/` must not import networking modules and
-  must not execute anything it generates; both are enforced by AST scans in
-  `safety.no_network_imports` and `safety.no_dynamic_execution`.
-- **No secrets, ever**, in code, state, or reports. See `SECURITY.md`.
+## 규칙
 
-## Where things are
+- **반론은 제기된 뒤 고칠 수 없다.** 제목·대상·본문·해소 조건을 무르게 고쳐서 해소하는
+  것이 이 루프의 가장 큰 위험이고, R6이 해시로 잡는다. **대상을 다른 조건으로 옮기는
+  것도 금지된다** — 본문은 그대로 둔 채 이미 고쳐놓은 조건에 갖다 붙이는 수법이기
+  때문이다. 생각이 달라졌다면 기존 반론을 그대로 두고 새 반론을 제기하라. 상태와 해소
+  항목만 바꿀 수 있다.
+- **반론 파일을 지우거나 번호를 바꿀 수 없다.** R12가 잡는다. 닫힌 반론을 다시 열 수도
+  없다. 조건을 합치거나 없애서 겨냥할 대상이 사라졌다면 `superseded`로 은퇴시키고,
+  `해소`에 비판을 넘겨받을 반론 `O-NNNN`을 적어라. **은퇴는 해소로 세지 않으므로**
+  그 반복의 R4는 따로 채워야 한다.
+- **'개정' 줄만 고치는 것은 해소가 아니다.** 조건의 실질 해시는 개정 필드를 제외한
+  주장·근거·한계로만 계산한다. R5가 잡는다.
+- **반론을 제기와 동시에 닫을 수 없다.** 자문자답으로는 R4를 통과하지 못한다.
+  반론은 최소 한 반복 동안 열려 있어야 한다.
+- **규칙을 고쳐서 통과시키지 마라.** `src/integrity.py`를 무르게 만들면 루프는 참인
+  통과를 보고한다. 이것만은 루프가 스스로 탐지하지 못하며, 사람 리뷰만이 막을 수 있다.
+  규칙이 잘못 재고 있다고 판단되면 풀 리퀘스트에 그 근거를 쓰고 `DECISIONS.md`에
+  기록하라.
+- **증거를 날조하지 마라.** 분량을 채우기 위한 문장, 통과만을 위한 반론은 쓰지 않는다.
+  문장을 베껴 늘리는 것은 R10이 잡지만, 성의 없는 글은 잡지 못한다. 그 부분은 당신에게
+  달려 있다.
+- **브리프가 정리 모드라고 하면 줄여라.** 문서 전체가 예산(기본 100,000자)을 넘으면
+  그 반복은 문서가 **줄어들어야만** R13을 통과한다. 어느 구획을 줄일지는 정해져 있지
+  않다 — 예산은 문서 전체에 걸리므로 배분은 당신의 판단이다. 예산은 '개정' 이력도
+  세므로 오래된 개정 줄을 쳐내는 것도 정리다. 그래도 기록은 `reports/`와
+  `state/ledger.json`에 남는다. 덧붙이는 방식으로는 통과할 수 없다. 같은 말을 다르게
+  반복한 문단을 합치고, 예시가 여럿이면 가장 강한 것만 남기고, 이미 해소된 반론에
+  답하느라 늘어난 방어 문장을 — 그 답이 주장에 흡수되었다면 — 지워라. 답은 남기고
+  변명은 지운다. 대상 조건을 줄이면 실질 해시가 바뀌므로 **줄이면서 반론을 해소할 수
+  있다.**
+- **비판을 한 조건에만 퍼붓지 마라.** 방금 고친 논증에서 새 반론을 뽑되, 브리프가
+  쏠림을 지적하면 다른 조건이나 문서 전체를 겨냥하라. R15가 잡는다. 조건 셋이 다
+  살아 있어야 문서가 세 국면을 다루는 지도로 남는다.
+- **분량을 맞추려고 조건을 지우지 마라.** R14가 잡는다. 정말 합쳐야 한다면 흡수한
+  조건의 '개정'에 사라진 번호를 적어 자취를 남겨라.
+- **예산을 늘려 정리를 피하지 마라.** `HANIK_DOCUMENT_BUDGET`을 올리는 것은
+  `src/integrity.py`를 무르게 고치는 것과 같다. 루프는 그것을 잡지 못한다.
+- **루프가 물러났다면 새 세션을 시작하지 마라.** 브리프 맨 위에 '정체' 또는 '마감'이
+  적혀 있으면 사람이 판단할 차례다. 반복을 더 쌓는 것은 전신 저장소가 250번에 걸쳐
+  한 일과 같다.
+- **오프라인을 유지한다.** `src/`는 네트워크 모듈을 가져오지 않고, 생성한 것을 실행하지
+  않는다. `tests/test_safety.py`의 AST 검사로 강제된다.
+- **비밀은 어디에도 두지 않는다.** `SECURITY.md`를 보라.
 
-| Path | Purpose |
+## 어디에 무엇이 있는가
+
+| 경로 | 용도 |
 | --- | --- |
-| `hanik/persona.md` | The virtual human: identity, voice, limits, escalation |
-| `hanik/policies/` | Safety and privacy policies the persona is bound by |
-| `hanik/benchmarks/` | Behavioural scenarios used to catch regressions |
-| `src/checks.py` | The evidence checks; failing ones are the backlog |
-| `src/hanik_loop.py` | Orchestration, scoring, stagnation detection |
-| `src/reporting.py` | HTML report, JSON companion, index, session brief |
-| `src/state.py` | Atomic state writes, pruning, lossless archive |
-| `state/next-session.md` | Your brief. Start here |
-| `reports/index.html` | Every iteration, newest first |
+| `Hanik.md` | 결과물. 인간의 조건 정의서 |
+| `SUMMARY.md` | 결산. 중요한 부분만 추린 생성물. 손으로 고치지 마라 |
+| `objections/` | 반론. 미해결 반론이 백로그다 |
+| `src/document.py` | `Hanik.md` 파서 |
+| `src/objections.py` | 반론 파서 |
+| `src/integrity.py` | 정직성 규칙 R1–R15 |
+| `src/settlement.py` | 결산. `SUMMARY.md`와 세션 기록을 만든다 |
+| `src/conclusion.py` | 마침. 정체와 마감을 판정한다 |
+| `src/state.py` | 원자적 상태 쓰기, 손상 복구, 이력 |
+| `src/reporting.py` | 보고서, 인덱스, 브리프 |
+| `src/hanik_loop.py` | 반복 하나의 오케스트레이션 |
+| `state/next-session.md` | 당신의 브리프. 여기서 시작하라 |
+| `reports/index.md` | 모든 반복, 최신순 |
+| `HANIK_SPEC.md` | 산출물 규격과 규칙의 정의 |
+| `DECISIONS.md` | 왜 이렇게 만들었고 무엇을 버렸는가 |
